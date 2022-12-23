@@ -1,0 +1,9 @@
+#PyCharmFiles
+.idea
+idea/*
+/viafirma
+/venv
+.env
+
+# PyCache
+__pycache__/
