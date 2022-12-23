@@ -31,7 +31,8 @@ uvicorn main:app --reload
 
 ### POST /client
 
-Create a new client.
+Create a new client. A client is a task in the list `Clientes` in the folder `Clientes` in the space `Clientes`.
+The id of the list, folder and space are defined in the `.env` file.
 
 #### Request
 
@@ -43,3 +44,4 @@ Create a new client.
         "assignees": [3182376]
 }
 ```
+
