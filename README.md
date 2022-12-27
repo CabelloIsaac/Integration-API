@@ -34,14 +34,36 @@ uvicorn src.main:app --reload
 Create a new client. A client is a task in the list `Clientes` in the folder `Clientes` in the space `Clientes`.
 The id of the list, folder and space are defined in the `.env` file.
 
+Also:
+
+- The task is created in the status `inbox`.
+- The task is assigned to the `cs_owner` sent in the request.
+- Creates the products as new tasks
+- Links the products to the client task
+
 #### Request
 
 ```json
 {
-        "name": "Test client",
-        "description": "Test client description",
-        "status": "inbox",
-        "assignees": [3182376]
+  "name": "Test client",
+  "description": "Test client description",
+  "cif_nif": "12345678B",
+  "cs_owner": "desarrollo.isaac@alotofpipol.com",
+  "send_slack_notification": true,
+  "send_email_notification": true,
+  "products": [
+    "KD-WEB"
+  ],
+  "custom_fields": [
+    {
+      "name": "¿SUBVENCIÓN APROBADA?",
+      "value": "SÍ"
+    },
+    {
+      "name": "ENLACE HUBSPOT",
+      "value": "https://www.google.com/?hl=es"
+    }
+  ]
 }
 ```
 
