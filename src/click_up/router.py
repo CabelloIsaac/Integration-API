@@ -17,3 +17,12 @@ router = APIRouter(
 def create_client(request: ClientBase):
     return controller.create_client(request=request)
 
+
+@router.get(
+    "/fix-tasks/",
+    summary="Fix tasks",
+    description="Fixes tasks in ClickUp updating the projects with the client data",
+    response_description="Count of tasks fixed",
+)
+def fix_tasks():
+    return controller.fix_tasks()

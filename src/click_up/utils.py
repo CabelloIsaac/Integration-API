@@ -163,3 +163,23 @@ class Utils:
             tipo_proyecto_name = "KD-GESTIÓN_DE_PROCESOS"
 
         return tipo_proyecto_name
+
+
+    @staticmethod
+    def get_custom_field_value_by_name(custom_fields: list[dict], name: str) -> str:
+        """Gets the custom field value by name.
+
+        Args:
+            custom_fields (list): The custom fields in the task.
+            name (str): The name of the custom field.
+
+        Returns:
+            str: The custom field value.
+        """
+        custom_field_value = ""
+        for field in custom_fields:
+            if field["name"] == name:
+                custom_field_value = field["value"]
+                break
+
+        return custom_field_value

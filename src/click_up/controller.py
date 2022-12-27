@@ -149,3 +149,29 @@ def create_client(request: ClientBase):
             print ("Sending email notification")
 
         return client
+
+
+def fix_tasks():
+
+    # Get lists from folder
+    lists = clickup_api_service.get_lists_from_folder(Config.CLICKUP_PRODUCTOS_FOLDER_ID)["lists"]
+
+    # Get tasks from each list
+    for list in lists:
+        print (f"Getting tasks from list {list['name']}")
+        list_id = list["id"]
+        tasks = clickup_api_service.get_tasks(list_id, subtasks=True)["tasks"]
+
+        for task in tasks:
+            parent = task["parent"]
+            if parent != "None" and parent is not None:
+                # print (f"Fixing task {task['name']}")
+                custom_fields = task["custom_fields"]
+
+                for custom_field in custom_fields:
+                    if custom_field["name"] == ClientCustomFields.ESTADO_PROYECTO:
+                       
+                        value = ""
+
+                        if "value" in custom_field:
+                            print (f"Tiene ESTADO_PROYECTO: {custom_field['value']}")

@@ -64,14 +64,28 @@ class ClickUpApiService:
         return response.json()
         
 
-    def get_tasks(self, list_id, include_closed: bool = False, custom_fields: str = None):
+    def get_tasks(
+        self,
+        list_id,
+        include_closed: bool = False,
+        custom_fields: str = None,
+        subtasks: bool = False
+    ):
         """Get all tasks in a list
         Args:
             list_id (str): The list id
         Returns:
             dict: The tasks"""
         url = f"{self.api_prefix}/list/{list_id}/task"
-        response = requests.get( url, headers=self.headers, params={"include_closed": include_closed, "custom_fields": custom_fields})
+        response = requests.get(
+            url,
+            headers=self.headers,
+            params={
+                "include_closed": include_closed,
+                "custom_fields": custom_fields,
+                "subtasks": subtasks,
+            }
+        )
         return response.json()
 
 
@@ -85,6 +99,19 @@ class ClickUpApiService:
         url = f"{self.api_prefix}/task/{task_id}"
         data = json.dumps(task)
         response = requests.put( url, headers=self.headers, data=data)
+        return response.json()
+
+
+    # Folders
+
+    def get_lists_from_folder(self, folder_id):
+        """Get all lists in a folder
+        Args:
+            folder_id (str): The folder id
+        Returns:
+            dict: The lists"""
+        url = f"{self.api_prefix}/folder/{folder_id}/list"
+        response = requests.get( url, headers=self.headers)
         return response.json()
 
 
