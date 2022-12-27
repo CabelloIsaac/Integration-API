@@ -24,7 +24,7 @@ CLICKUP_CLIENTES_LIST_ID = ""
 3. Run the script
 
 ```bash
-uvicorn main:app --reload
+uvicorn src.main:app --reload
 ```
 
 ## Endpoints
