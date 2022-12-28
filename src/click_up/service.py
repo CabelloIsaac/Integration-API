@@ -83,22 +83,29 @@ class ClickUpApiService:
             url,
             headers=self.headers,
             params={
-                "include_closed": include_closed,
-                "custom_fields": custom_fields,
-                "subtasks": subtasks,
+                "include_closed": str(include_closed).lower(),
+                "custom_fields": str(custom_fields).lower(),
+                "subtasks": str(subtasks).lower(),
             }
         )
         return response.json()
 
 
-    def get_task(self, task_id):
+    def get_task(self, task_id, include_subtasks: bool = False, custom_task_ids: bool = False):
         """Get a task
         Args:
             task_id (str): The task id
         Returns:
             dict: The task"""
         url = f"{self.api_prefix}/task/{task_id}"
-        response = requests.get( url, headers=self.headers)
+
+        query = {
+            "include_subtasks": str(include_subtasks).lower(),
+            "custom_task_ids": str(custom_task_ids).lower(),
+            "team_id": Config.CLICKUP_TEAM_ID,
+        }
+
+        response = requests.get( url, headers=self.headers, params=query)
         return response.json()
 
 
@@ -192,6 +199,17 @@ class ClickUpApiService:
             dict: The webhooks"""
         url = f"{self.api_prefix}/team/{team_id}/webhook"
         response = requests.get( url, headers=self.headers)
+        return response.json()
+
+
+    def delete_webhook(self, webhook_id):
+        """Delete a webhook
+        Args:
+            webhook_id (str): The webhook id
+        Returns:
+            dict: The webhook deleted"""
+        url = f"{self.api_prefix}/webhook/{webhook_id}"
+        response = requests.delete( url, headers=self.headers)
         return response.json()
 
 

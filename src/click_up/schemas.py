@@ -9,3 +9,7 @@ class ClientBase(BaseModel):
     send_email_notification: bool
     products: Optional[list[str]]
     custom_fields: Optional[list[dict]]
+
+class TaskUpdatedElement(BaseModel):
+    task_id: Optional[str] = None
+    custom_task_ids: Optional[bool] = False
