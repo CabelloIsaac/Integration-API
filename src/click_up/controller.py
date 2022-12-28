@@ -1,4 +1,5 @@
 import json
+from time import sleep, time
 
 from .config import Config
 from .constants import ClientCustomFields
@@ -193,13 +194,15 @@ def create_webhook():
 
 def update_custom_fields_in_subtask(parent_custom_fields: list[dict], subtask: dict):
     fields_to_update = {}
+    
+    start_time = time()
                 
     for parent_custom_field in parent_custom_fields:
         field_name = parent_custom_field["name"]
         
         if field_name in Config.FIELDS_TO_UPDATE_WHEN_UPDATE_PROJECT:
             field_value = Utils.get_custom_field_value_by_name(parent_custom_fields, field_name)    
-            fields_to_update[field_name] = field_value  
+            fields_to_update[field_name] = field_value
 
     print (f"\nUpdating fields in task '{subtask['name']}':")
     for field_to_update in fields_to_update:
@@ -209,14 +212,14 @@ def update_custom_fields_in_subtask(parent_custom_fields: list[dict], subtask: d
         field_type = Utils.get_custom_field_type_by_id(parent_custom_fields, field_id)
 
         if field_id != "" and field_value != "":
-            print (f"\nField id: {field_id}")
-            print (f"Field name: {field_name}")
-            print (f"Field value: {field_value}")
-            print (f"Field type: {field_type}")
             clickup_api_service.set_custom_field_to_task(subtask["id"], field_id, field_value, type=field_type)
 
+    print (f"Finished updating fields in task '{subtask['name']}' in {time() - start_time} seconds")
 
 def sync_task(request: TaskUpdatedElement):
+
+    start_time = time()
+
     print (f"Syncing task {request.task_id}")
     updated_task_id = request.task_id
     updated_task = clickup_api_service.get_task(
@@ -227,6 +230,9 @@ def sync_task(request: TaskUpdatedElement):
 
     if "id" not in updated_task:
         return "Task not found"
+
+    if "subtasks" not in updated_task:
+        return "No subtasks found. Nothing to do."
 
     subtasks_length = len(updated_task["subtasks"])
 
@@ -257,13 +263,19 @@ def sync_task(request: TaskUpdatedElement):
         "updated_subtasks": updated_subtasks
     }
 
+    end_time = time()
+    print (f"Syncing task {request.task_id} took {end_time - start_time} seconds")
+
     return response
 
 
 def sync_all_tasks():
 
+    start_time = time()
+    tasks_processed = 0
+
     # Set to True to update only the first subtask found. Set to False to update all subtasks found.
-    ONLY_EXECUTE_ONCE = True 
+    ONLY_EXECUTE_ONCE = False 
     create_webhook()
 
     # Get lists from folder
@@ -274,7 +286,24 @@ def sync_all_tasks():
         print ("\n############################################")
         print (f"Getting tasks from list '{list['name']}'")
         list_id = list["id"]
-        tasks = clickup_api_service.get_tasks(list_id, subtasks=True)["tasks"]
+        tasks = []
+        current_page = 0
+        is_last_page = False
+
+        # Get tasks from list (paginated)
+        while not is_last_page:
+            tasks_response = clickup_api_service.get_tasks(list_id, subtasks=True, page=current_page)
+
+            if "tasks" not in tasks_response:
+                print ("Error getting tasks")
+                return tasks_response
+
+            current_page += 1
+
+            tasks += tasks_response["tasks"]
+            is_last_page = tasks_response["tasks"] == []
+
+        print (f"Tasks found: {len(tasks)}")
 
         parent_task = None
 
@@ -295,9 +324,16 @@ def sync_all_tasks():
                 print (f"Parent task '{parent_task['name']}'")
 
                 update_custom_fields_in_subtask(parent_custom_fields=parent_custom_fields, subtask=task)
+                tasks_processed += 1
 
                 if ONLY_EXECUTE_ONCE:
                     return "Done"
 
-        return "Done"
-        
+        print ("Waiting 5 seconds before getting next list...")
+        sleep(5)
+
+    end_time = time()
+    print (f"Syncing {tasks_processed} tasks took {end_time - start_time} seconds")
+
+    return "Done"
+    

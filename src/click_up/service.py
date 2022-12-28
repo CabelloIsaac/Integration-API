@@ -71,7 +71,8 @@ class ClickUpApiService:
         list_id,
         include_closed: bool = False,
         custom_fields: str = None,
-        subtasks: bool = False
+        subtasks: bool = False,
+        page: int = 0,
     ):
         """Get all tasks in a list
         Args:
@@ -84,8 +85,9 @@ class ClickUpApiService:
             headers=self.headers,
             params={
                 "include_closed": str(include_closed).lower(),
-                "custom_fields": str(custom_fields).lower(),
+                "custom_fields": custom_fields,
                 "subtasks": str(subtasks).lower(),
+                "page": page,
             }
         )
         return response.json()
