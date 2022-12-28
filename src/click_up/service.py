@@ -3,6 +3,8 @@ import json
 import requests
 
 from .config import Config
+from .constants import CustomFieldTypes
+
 
 class ClickUpApiService:
 
@@ -89,6 +91,17 @@ class ClickUpApiService:
         return response.json()
 
 
+    def get_task(self, task_id):
+        """Get a task
+        Args:
+            task_id (str): The task id
+        Returns:
+            dict: The task"""
+        url = f"{self.api_prefix}/task/{task_id}"
+        response = requests.get( url, headers=self.headers)
+        return response.json()
+
+
     def update_task(self, task_id, task):
         """Update a task
         Args:
@@ -115,7 +128,7 @@ class ClickUpApiService:
         return response.json()
 
 
-    def set_custom_field_to_task(self, task_id, field_id, value):
+    def set_custom_field_to_task(self, task_id, field_id, value, type: str = None):
         """Set a custom field to a task
         Args:
             task_id (str): The task id
@@ -124,9 +137,15 @@ class ClickUpApiService:
         Returns:
             dict: The task updated"""
         url = f"{self.api_prefix}/task/{task_id}/field/{field_id}"
-        data = json.dumps({"value": value})
-        response = requests.put( url, headers=self.headers, data=data)
-        return response.json()
+
+        formatted_value = {"value": value}
+
+        if type == CustomFieldTypes.USERS:
+            users_id_list = [user["id"] for user in value]
+            formatted_value = {"value":{"add": users_id_list}}
+
+        data = json.dumps(formatted_value)
+        requests.post( url, headers=self.headers, data=data)
         
 
     def get_list_members(self, list_id):
@@ -150,6 +169,31 @@ class ClickUpApiService:
         url = f"{self.api_prefix}/task/{task_id}/link/{links_to}"
         response = requests.post( url, headers=self.headers)
         return response.json()
+
+
+    def create_webhook(self, team_id, webhook):
+        """Create a webhook
+        Args:
+            team_id (str): The team id
+            webhook (dict): The webhook to create
+        Returns:
+            dict: The webhook created"""
+        url = f"{self.api_prefix}/team/{team_id}/webhook"
+        data = json.dumps(webhook)
+        response = requests.post( url, headers=self.headers, data=data)
+        return response.json()
+
+
+    def get_webhooks(self, team_id):
+        """Get all webhooks
+        Args:
+            team_id (str): The team id
+        Returns:
+            dict: The webhooks"""
+        url = f"{self.api_prefix}/team/{team_id}/webhook"
+        response = requests.get( url, headers=self.headers)
+        return response.json()
+
 
 
 clickup_api_service = ClickUpApiService(Config.CLICKUP_ACCESS_TOKEN)

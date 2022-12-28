@@ -2,6 +2,8 @@ import os
 
 from dotenv import load_dotenv
 
+from .constants import ClientCustomFields
+
 load_dotenv()
 
 class Config():
@@ -13,3 +15,14 @@ class Config():
     CLICK_UP_NEW_CLIENT_STATUS = os.getenv('CLICK_UP_NEW_CLIENT_STATUS', "inbox")
     
     CLICKUP_PRODUCTOS_FOLDER_ID = os.getenv('CLICKUP_PRODUCTOS_FOLDER_ID', "")
+
+    fields_to_update_when_update_project = [
+        ClientCustomFields.CS_MANAGER,
+        ClientCustomFields.ESTADO_PROYECTO,
+        ClientCustomFields.LINK_DOCUMENTACION_PROYECTO,
+        ClientCustomFields.LINK_DOCUMENTO_TEXTOS,
+        ClientCustomFields.LINK_PRESENTACION_CLIENTE,
+        ClientCustomFields.PRODUCTO,
+        ClientCustomFields.TIPO_ITEM_CLICKUP,
+        ClientCustomFields.TIPO_PROYECTO,
+    ]

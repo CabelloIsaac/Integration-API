@@ -17,6 +17,10 @@ class ClientCustomFields():
     PRODUCTO: str = "PRODUCTO"
     CIF_NIF_CLIENTE: str = "CIF/NIF CLIENTE"
     CS_MANAGER: str = "C.S. MANAGER"
+    LINK_PRESENTACION_CLIENTE: str = "LINK PRESENTACIÓN CLIENTE"
+    TIPO_PROYECTO: str = "TIPO PROYECTO"
+    LINK_DOCUMENTO_TEXTOS: str = "LINK DOCUMENTO TEXTOS"
+
 
 class ProductsKeys:
     KD_WEB: str = "KD-WEB"
@@ -26,3 +30,39 @@ class ProductsKeys:
     KD_ECOM: str = "KD-ECOM"
     KD_CRM : str = "KD-CRM"
     KD_PROC: str = "KD-PROC"
+
+
+class CustomFieldTypes:
+    TASKS: str = "tasks"
+    USERS: str = "users"
+
+
+class WebhookEvents:
+    TASK_CREATED:str = "taskCreated"
+    TASK_UPDATED:str = "taskUpdated"
+    TASK_DELETED:str = "taskDeleted"
+    TASK_PRIORITY_UPDATED:str = "taskPriorityUpdated"
+    TASK_STATUS_UPDATED:str = "taskStatusUpdated"
+    TASK_ASSIGNEE_UPDATED:str = "taskAssigneeUpdated"
+    TASK_DUE_DATE_UPDATED:str = "taskDueDateUpdated"
+    TASK_TAG_UPDATED:str = "taskTagUpdated"
+    TASK_MOVED:str = "taskMoved"
+    TASK_COMMENT_POSTED:str = "taskCommentPosted"
+    TASK_COMMENT_UPDATED:str = "taskCommentUpdated"
+    TASK_TIME_ESTIMATE_UPDATED:str = "taskTimeEstimateUpdated"
+    TASK_TIME_TRACKED_UPDATED:str = "taskTimeTrackedUpdated"
+    LIST_CREATED:str = "listCreated"
+    LIST_UPDATED:str = "listUpdated"
+    LIST_DELETED:str = "listDeleted"
+    FOLDER_CREATED:str = "folderCreated"
+    FOLDER_UPDATED:str = "folderUpdated"
+    FOLDER_DELETED:str = "folderDeleted"
+    SPACE_CREATED:str = "spaceCreated"
+    SPACE_UPDATED:str = "spaceUpdated"
+    SPACE_DELETED:str = "spaceDeleted"
+    GOAL_CREATED:str = "goalCreated"
+    GOAL_UPDATED:str = "goalUpdated"
+    GOAL_DELETED:str = "goalDeleted"
+    KEY_RESULT_CREATED:str = "keyResultCreated"
+    KEY_RESULT_UPDATED:str = "keyResultUpdated"
+    KEY_RESULT_DELETED:str = "keyResultDeleted"

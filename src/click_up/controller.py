@@ -158,20 +158,51 @@ def fix_tasks():
 
     # Get tasks from each list
     for list in lists:
-        print (f"Getting tasks from list {list['name']}")
+        print ("\n############################################")
+        print (f"Getting tasks from list '{list['name']}'")
         list_id = list["id"]
         tasks = clickup_api_service.get_tasks(list_id, subtasks=True)["tasks"]
+
+        parent_task = None
 
         for task in tasks:
             parent = task["parent"]
             if parent != "None" and parent is not None:
-                # print (f"Fixing task {task['name']}")
-                custom_fields = task["custom_fields"]
+                print ("\n--------------------------------------------")
+                print (f"Fixing task '{task['name']}' - {task['id']}")
 
-                for custom_field in custom_fields:
-                    if custom_field["name"] == ClientCustomFields.ESTADO_PROYECTO:
-                       
-                        value = ""
+                fields_to_update = {}
 
-                        if "value" in custom_field:
-                            print (f"Tiene ESTADO_PROYECTO: {custom_field['value']}")
+                # Check if parent task is not the same as the last one
+                if parent_task is None or parent_task["id"] != parent:
+                    print (f"\nGetting parent task with id: '{parent}'")
+                    parent_task = clickup_api_service.get_task(parent)
+
+                # Get parent task custom fields
+                parent_custom_fields = parent_task["custom_fields"]
+
+                print (f"Parent task '{parent_task['name']}'")
+                
+                for parent_custom_field in parent_custom_fields:
+                    field_name = parent_custom_field["name"]
+                    
+                    if field_name in Config.fields_to_update_when_update_project:
+                        field_value = Utils.get_custom_field_value_by_name(parent_custom_fields, field_name)    
+                        fields_to_update[field_name] = field_value  
+
+                print (f"\nUpdating fields in task '{task['name']}':")
+                for field_to_update in fields_to_update:
+                    field_id = Utils.get_custom_field_id_by_name(parent_custom_fields, field_to_update)
+                    field_name = field_to_update
+                    field_value = fields_to_update[field_to_update]
+                    field_type = Utils.get_custom_field_type_by_id(parent_custom_fields, field_id)
+
+                    if field_id != "" and field_value != "":
+                        print (f"\nField id: {field_id}")
+                        print (f"Field name: {field_name}")
+                        print (f"Field value: {field_value}")
+                        print (f"Field type: {field_type}")
+                        clickup_api_service.set_custom_field_to_task(task["id"], field_id, field_value, type=field_type)
+                    
+
+                return True
