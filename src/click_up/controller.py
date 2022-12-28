@@ -246,7 +246,7 @@ def sync_task(request: TaskUpdatedElement):
             "name": subtask["name"],
             "url": subtask["url"]
         })
-        
+
     response = {
         "status": "ok",
         "updated_task": {
@@ -262,7 +262,8 @@ def sync_task(request: TaskUpdatedElement):
 
 def sync_all_tasks():
 
-    ONLY_EXECUTE_ONCE = True
+    # Set to True to update only the first subtask found. Set to False to update all subtasks found.
+    ONLY_EXECUTE_ONCE = True 
     create_webhook()
 
     # Get lists from folder
