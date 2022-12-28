@@ -84,6 +84,26 @@ class Utils:
 
 
     @staticmethod
+    def get_custom_field_type_by_id(custom_fields: list[dict], custom_field_id: str) -> str:
+        """Gets the custom field type by id.
+
+        Args:
+            custom_fields (list): The custom fields available in click up.
+            custom_field_id (str): The custom field id.
+
+        Returns:
+            str: The custom field type.
+        """
+        custom_field_type = ""
+        for field in custom_fields:
+            if field["id"] == custom_field_id:
+                custom_field_type = field["type"]
+                break
+
+        return custom_field_type
+
+
+    @staticmethod
     def build_client_custom_fields(client_custom_fields: list[dict], custom_fields: list[dict]) -> list:
         """Builds the client custom fields from the client data.
 
@@ -163,3 +183,24 @@ class Utils:
             tipo_proyecto_name = "KD-GESTIÓN_DE_PROCESOS"
 
         return tipo_proyecto_name
+
+
+    @staticmethod
+    def get_custom_field_value_by_name(custom_fields: list[dict], name: str) -> str:
+        """Gets the custom field value by name.
+
+        Args:
+            custom_fields (list): The custom fields in the task.
+            name (str): The name of the custom field.
+
+        Returns:
+            str: The custom field value.
+        """
+        custom_field_value = ""
+        for field in custom_fields:
+            if field["name"] == name:
+                if "value" in field:
+                    custom_field_value = field["value"]
+                break
+
+        return custom_field_value
