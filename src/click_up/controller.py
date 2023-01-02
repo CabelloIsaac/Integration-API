@@ -216,6 +216,7 @@ def update_custom_fields_in_subtask(parent_custom_fields: list[dict], subtask: d
 
     print (f"Finished updating fields in task '{subtask['name']}' in {time() - start_time} seconds")
 
+
 def sync_task(request: TaskUpdatedElement):
 
     start_time = time()
