@@ -1,5 +1,6 @@
 from .config import Config
-from .constants import ClientCustomFields, ProductsKeys
+from .constants import ProductsKeys
+from ..constants import ClickUpCustomFields
 from .service import clickup_api_service
 
 
@@ -32,7 +33,7 @@ class Utils:
         # custom_fields = clickup_api_service.get_list_custom_fields(Config.CLICKUP_LIST_ID, as_name_id_dict=True)
 
         cif_nif = {}
-        cif_nif_custom_field_id = Utils.get_custom_field_id_by_name(custom_fields, ClientCustomFields.CIF_NIF_CLIENTE)
+        cif_nif_custom_field_id = Utils.get_custom_field_id_by_name(custom_fields, ClickUpCustomFields.CIF_NIF_CLIENTE)
         for field in client_custom_fields:
             if field["id"] == cif_nif_custom_field_id:
                 cif_nif = {
@@ -122,11 +123,12 @@ class Utils:
             custom_field_value = field["value"]
             custom_field = Utils.get_custom_field_by_id(custom_fields, custom_field_id)
 
-            if custom_field["type"] == "drop_down":
-                for option in custom_field["type_config"]["options"]:
-                    if option["name"] == custom_field_value:
-                        custom_field_value = option["id"]
-                        break
+            if "type" in custom_field:
+                if custom_field["type"] == "drop_down":
+                    for option in custom_field["type_config"]["options"]:
+                        if option["name"] == custom_field_value:
+                            custom_field_value = option["id"]
+                            break
 
             new_client_custom_fields.append({
                 "id": custom_field_id,

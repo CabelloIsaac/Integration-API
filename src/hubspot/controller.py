@@ -4,6 +4,7 @@ from .utils import Utils
 from .service import hubspot_client
 from .constants import EstadoClickup, Associations
 from .config import Config
+from ..constants import ClickUpCustomFields
 
 
 def get_deal_companies(deal_id):
@@ -76,13 +77,26 @@ def get_deals():
     return deals
 
 
+def set_deal_as_added_to_clickup(deal_id):
+    print (f"Setting deal {deal_id} as added to ClickUp")
+    return hubspot_client.update_deal(deal_id=deal_id, properties={"estado_clickup": EstadoClickup.ANADIDO_A_CLICKUP})
+
+
 def get_company(company_id):
     return hubspot_client.get_company(company_id=company_id)
 
 
+def get_owner_by_email(email):
+    return hubspot_client.get_owners(email=email)["results"][0]
+
+
+def get_owner_by_id(owner_id):
+    return hubspot_client.get_owner_by_id(owner_id=owner_id)
+
+
 def get_random_cs_owner():
     cs_owner_email = random.choice(Config.CS_OWNERS_EMAILS)
-    cs_owner = hubspot_client.get_owners(email=cs_owner_email)["results"][0]
+    cs_owner = get_owner_by_email(cs_owner_email)
     cs_owner_id = cs_owner["id"]
 
     print (f"Got {cs_owner_email} ({cs_owner_id})")
@@ -103,6 +117,17 @@ def create_project(project_name):
     }
     project = hubspot_client.create_custom_object(object_type=Config.HUBSPOT_PROJECT_OBJECT_TYPE,properties=properties)
     return project
+
+
+def update_project(project):
+    project_id = project["hubspot_id"]
+    properties = {
+        "clickup_id": project["clickup_id"],
+        "clickup_link": project["clickup_link"],
+    }
+    print (f"Updating project {project_id}")
+    print (properties)
+    return hubspot_client.update_custom_object(object_type=Config.HUBSPOT_PROJECT_OBJECT_TYPE, object_id=project_id, properties=properties)
 
 
 def assign_cs_owner_to_company(company):
@@ -130,6 +155,7 @@ def assign_cs_owner_to_company(company):
 def process_deals():
 
     deals = get_deals()
+    click_up_clients = []
 
     # Loop through deals
     for deal in deals:
@@ -139,6 +165,7 @@ def process_deals():
 
         # Check if deal is ready to be processed
         if deal_status == EstadoClickup.LISTO:
+            print ("\n###############################################")
             print (f"Deal {deal_name} ({deal_id}) is ready to be processed")
             print (f"ClickUp Status: {deal_status}")
 
@@ -208,6 +235,8 @@ def process_deals():
             # Update COMPANY with CONTRACT
             associate_contract_with_company(company_id=company_id, contract_id=contract_id)
 
+            products = []
+
             # Create PROJECT for every line_item and link to COMPANY and CONTRACT
             for line_item_sku in line_items_skus:
                 line_item_id = line_item_sku["id"]
@@ -220,8 +249,13 @@ def process_deals():
                     print ("Project not created. Skipping...")
                     continue
 
-                print (f"Project created: {line_item_sku} - {project['id']}")
+                print (f"\nProject created: {line_item_sku} - {project['id']}")
                 project_id = project["id"]
+
+                products.append({
+                    "id": project_id,
+                    "sku": line_item_sku,
+                })
 
                 # Update COMPANY with PROJECT
                 associate_project_with_company(company_id=company_id, project_id=project_id)
@@ -229,4 +263,33 @@ def process_deals():
                 # Update CONTRACT with PROJECT
                 associate_project_with_contract(contract_id=contract_id, project_id=project_id)
 
-    return deals
+            print (f"\nBuilding ClickUp payload...")
+            click_up_payload = build_click_up_payload(company=company, products=products, deal_id=deal_id)
+            click_up_clients.append(click_up_payload)
+        
+
+    return click_up_clients
+
+
+def build_click_up_payload(company, products, deal_id):
+
+    owner_id = company["properties"]["hubspot_owner_id"]
+    owner = get_owner_by_id(owner_id=owner_id)
+    owner_email = owner["email"]
+
+    click_up_payload = {
+        "name": company['properties']['name'],
+        "description": company['properties']['description'],
+        "cif_nif": company['id'], # TODO: Get from HubSpot
+        "cs_owner": owner_email,
+        "hubspot_deal_id": deal_id,
+        "products": products,
+        "custom_fields": [
+            {
+                "name": ClickUpCustomFields.ID_CLIENTE_HUBSPOT,
+                "value": company['id']
+            }
+        ]
+    }
+
+    return click_up_payload

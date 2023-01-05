@@ -1,16 +1,18 @@
 from pprint import pprint
 
+import requests
+
 import hubspot
 from hubspot.crm.companies import ApiException as CompanyApiException
 from hubspot.crm.companies import \
     SimplePublicObjectInput as CompanySimplePublicObjectInput
-from hubspot.crm.deals import ApiException as DealApiException
+from hubspot.crm.deals import ApiException as DealApiException, SimplePublicObjectInput as DealSimplePublicObjectInput
 from hubspot.crm.line_items import ApiException as LineItemApiException
 from hubspot.crm.objects import ApiException as ObjectApiException
 from hubspot.crm.objects import SimplePublicObjectInput
 from hubspot.crm.owners import ApiException as OwnerApiException
 from hubspot.crm.quotes import ApiException as QuoteApiException
-import requests
+
 from .config import Config
 from .constants import Associations
 
@@ -49,6 +51,20 @@ class HubspotService:
             return api_response.to_dict()
         except DealApiException as e:
             print("Exception when calling basic_api->get_page: %s\n" % e)
+
+
+    def update_deal(self, deal_id, properties):
+        try:
+            simple_public_object_input = DealSimplePublicObjectInput(
+                properties=properties
+            )
+            api_response = self.client.crm.deals.basic_api.update(
+                deal_id=deal_id,
+                simple_public_object_input=simple_public_object_input
+            )
+            return api_response.to_dict()
+        except DealApiException as e:
+            print("Exception when calling basic_api->update: %s\n" % e)
 
 
     def get_deal_associations(self, deal_id, to_object_type:str, limit=100):
@@ -127,6 +143,7 @@ class HubspotService:
                     "phone",
                     "website",
                     "hubspot_owner_id",
+                    "description",
                 ]
             )
             return response.to_dict()
@@ -195,6 +212,17 @@ class HubspotService:
             return None
 
 
+    def get_owner_by_id(self, owner_id):
+        try:
+            response = self.client.crm.owners.owners_api.get_by_id(
+                owner_id=owner_id
+            )
+            return response.to_dict()
+        except OwnerApiException as e:
+            print("Exception when calling OwnersApi->get_by_id: %s\n" % e)
+            return None
+
+
     def get_quote_by_id(self, quote_id):
         try:
             response = self.client.crm.quotes.basic_api.get_by_id(
@@ -245,6 +273,21 @@ class HubspotService:
             return response.to_dict()
         except ObjectApiException as e:
             print("Exception when calling basic_api->create: %s\n" % e)
+            return None
+
+
+    def update_custom_object(self, object_type:str, object_id, properties):
+        simple_public_object_input = SimplePublicObjectInput(properties=properties)
+
+        try:
+            response = self.client.crm.objects.basic_api.update(
+                object_type=object_type,
+                object_id=object_id,
+                simple_public_object_input=simple_public_object_input
+            )
+            return response.to_dict()
+        except ObjectApiException as e:
+            print("Exception when calling basic_api->update: %s\n" % e)
             return None
 
 

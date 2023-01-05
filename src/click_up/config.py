@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-from .constants import ClientCustomFields
+from ..constants import ClickUpCustomFields
 
 load_dotenv()
 
@@ -17,12 +17,12 @@ class Config():
     CLICKUP_PRODUCTOS_FOLDER_ID = os.getenv('CLICKUP_PRODUCTOS_FOLDER_ID', "")
 
     FIELDS_TO_UPDATE_WHEN_UPDATE_PROJECT = [
-        ClientCustomFields.CS_MANAGER,
-        ClientCustomFields.ESTADO_PROYECTO,
-        ClientCustomFields.LINK_DOCUMENTACION_PROYECTO,
-        ClientCustomFields.LINK_DOCUMENTO_TEXTOS,
-        ClientCustomFields.LINK_PRESENTACION_CLIENTE,
-        ClientCustomFields.PRODUCTO,
-        ClientCustomFields.TIPO_ITEM_CLICKUP,
-        ClientCustomFields.TIPO_PROYECTO,
+        ClickUpCustomFields.CS_MANAGER,
+        ClickUpCustomFields.ESTADO_PROYECTO,
+        ClickUpCustomFields.LINK_DOCUMENTACION_PROYECTO,
+        ClickUpCustomFields.LINK_DOCUMENTO_TEXTOS,
+        ClickUpCustomFields.LINK_PRESENTACION_CLIENTE,
+        ClickUpCustomFields.PRODUCTO,
+        ClickUpCustomFields.TIPO_ITEM_CLICKUP,
+        ClickUpCustomFields.TIPO_PROYECTO,
     ]  
