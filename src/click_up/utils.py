@@ -206,3 +206,23 @@ class Utils:
                 break
 
         return custom_field_value
+
+
+    def get_list_id_for_product_by_sku(lists: list[dict], sku: str) -> str:
+        """Gets the right list id for product by sku.
+
+        Args:
+            lists (list): The lists in the team.
+            sku (str): The sku of the product.
+
+        Returns:
+            str: The list id.
+        """
+        list_id = ""
+        for list in lists:
+            # Check if the list name contains the sku
+            if sku in list["name"]:
+                list_id = list["id"]
+                break
+
+        return list_id

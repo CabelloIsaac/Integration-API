@@ -48,9 +48,12 @@ def check_client_exists (custom_fields, cif_nif_cliente):
 def create_client(request: ClientBase):
 
     custom_fields = clickup_api_service.get_list_custom_fields(Config.CLICKUP_CLIENTES_LIST_ID)["fields"]
+    product_lists = clickup_api_service.get_lists_from_folder(Config.CLICKUP_PRODUCTOS_FOLDER_ID)["lists"]
+
     client_exists = check_client_exists(custom_fields, request.cif_nif)
 
     if client_exists:
+        # if exists, take the current it to add projects
         print (f"Client already exists at {client_exists['url']}")
         return {
             "status": "error",
@@ -115,6 +118,18 @@ def create_client(request: ClientBase):
             sku = product["sku"]
             hubspot_product_id = product["id"]
             product_name = f"{sku}: {client_name}"
+            list_id = Utils.get_list_id_for_product_by_sku(lists=product_lists, sku=sku)
+
+            print (f"Creating product {product_name} in list {list_id}")
+
+            if list_id is None:
+                print (f"Error creating product {product_name}: list not found")
+                return {
+                    "error": "Error creating product",
+                    "cif_nif": request.cif_nif,
+                    "name": request.name,
+                    "error_message": f"Error creating product {product_name}: list not found"
+                }
 
             product_custom_fields = [
                 {
@@ -135,11 +150,21 @@ def create_client(request: ClientBase):
 
             new_product = {
                 "name": product_name,
-                "status": Config.CLICK_UP_NEW_CLIENT_STATUS,
+                "status": "to do",
                 "assignees": [cs_owner_id],
                 "custom_fields": product_custom_fields,
             }
-            new_product = clickup_api_service.create_task(Config.CLICKUP_CLIENTES_LIST_ID, new_product)
+            new_product = clickup_api_service.create_task(list_id, new_product)
+
+            if "id" not in new_product:
+                print (f"Error creating product {product_name}")
+                return {
+                    "status": "error",
+                    "error": "Error creating product",
+                    "cif_nif": request.cif_nif,
+                    "name": request.name,
+                    "error_message": new_product
+                }
 
             print (f"Product {new_product['name']} ({new_product['id']}) created at {new_product['url']}")
             

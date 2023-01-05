@@ -140,10 +140,9 @@ class HubspotService:
                 company_id=company_id,
                 properties=[
                     "name",
-                    "phone",
-                    "website",
                     "hubspot_owner_id",
                     "description",
+                    "nif_cif",
                 ]
             )
             return response.to_dict()
