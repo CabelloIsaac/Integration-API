@@ -2,7 +2,7 @@ import json
 from time import sleep, time
 
 from .config import Config
-from .constants import ClientCustomFields
+from ..constants import ClickUpCustomFields
 from .schemas import ClientBase, TaskUpdatedElement
 from .service import clickup_api_service
 from .utils import Utils
@@ -25,7 +25,7 @@ def build_cif_nif_cliente_for_checking_if_exists(cif_nif_cliente_field_id: str, 
 
 
 def check_client_exists (custom_fields, cif_nif_cliente):
-    cif_nif_cliente_field_id = Utils.get_custom_field_id_by_name(custom_fields, ClientCustomFields.CIF_NIF_CLIENTE)
+    cif_nif_cliente_field_id = Utils.get_custom_field_id_by_name(custom_fields, ClickUpCustomFields.CIF_NIF_CLIENTE)
     cif_nif_cliente_for_checking_if_exists = build_cif_nif_cliente_for_checking_if_exists(cif_nif_cliente_field_id, cif_nif_cliente)
 
     clients = clickup_api_service.get_tasks(
@@ -52,7 +52,13 @@ def create_client(request: ClientBase):
 
     if client_exists:
         print (f"Client already exists at {client_exists['url']}")
-        return json.dumps({'error': 'Client already exists'})
+        return {
+            "status": "error",
+            "error": "Client already exists",
+            "cif_nif": request.cif_nif,
+            "name": request.name,
+            "url": client_exists["url"]            
+        }
     else:
 
         print (f"Creating client {request.name}")
@@ -60,8 +66,6 @@ def create_client(request: ClientBase):
         # Get data from request
         client_name = request.name.upper()
         cs_owner = request.cs_owner
-        send_slack_notification = request.send_slack_notification
-        send_email_notification = request.send_email_notification
         client_custom_fields = request.custom_fields
         products = request.products
 
@@ -75,7 +79,7 @@ def create_client(request: ClientBase):
 
         # Add CIF/NIF to client custom fields
         client_custom_fields.append({
-            "name": ClientCustomFields.CIF_NIF_CLIENTE,
+            "name": ClickUpCustomFields.CIF_NIF_CLIENTE,
             "value": request.cif_nif
         })
 
@@ -93,21 +97,36 @@ def create_client(request: ClientBase):
         # Create client
         client = clickup_api_service.create_task(Config.CLICKUP_CLIENTES_LIST_ID, client)
 
+        if "id" not in client:
+            print (f"Error creating client {client_name}")
+            return {
+                "error": "Error creating client",
+                "cif_nif": request.cif_nif,
+                "name": request.name,
+                "error_message": client
+            }
+
+        print (f"Client {client_name} ({client['id']}) created at {client['url']}")
+
+        projects = [] # Projects to be returned to Hubspot
+
         # Create products
         for product in products:
-            product_name = f"{product}: {client_name}"
+            sku = product["sku"]
+            hubspot_product_id = product["id"]
+            product_name = f"{sku}: {client_name}"
 
             product_custom_fields = [
                 {
-                    "name": ClientCustomFields.ESTADO_PROYECTO,
+                    "name": ClickUpCustomFields.ESTADO_PROYECTO,
                     "value": "PREPARADOS (EN ESPERA)"
                 },
                 {
-                    "name": ClientCustomFields.PRODUCTO,
-                    "value": Utils.get_tipo_proyecto_name_by_key(product)
+                    "name": ClickUpCustomFields.PRODUCTO,
+                    "value": Utils.get_tipo_proyecto_name_by_key(sku)
                 },
                 {
-                    "name": ClientCustomFields.TIPO_ITEM_CLICKUP,
+                    "name": ClickUpCustomFields.TIPO_ITEM_CLICKUP,
                     "value": "Proyecto"
                 },
 
@@ -122,34 +141,24 @@ def create_client(request: ClientBase):
             }
             new_product = clickup_api_service.create_task(Config.CLICKUP_CLIENTES_LIST_ID, new_product)
 
-            print (f"Created product {new_product['name']}")
+            print (f"Product {new_product['name']} ({new_product['id']}) created at {new_product['url']}")
             
             clickup_api_service.add_task_link(client["id"], new_product["id"])
 
-            # client_custom_fields = Utils.build_client_custom_fields([
-            #         {
-            #             "name": ClientCustomFields.ENLACE_A_PROYECTOS,
-            #             "value": [new_product["id"]]
-            #         }
-            #     ], custom_fields)
-            # clickup_api_service.update_task(client["id"], {
-            #     "custom_fields":  client_custom_fields
-            # })
+            projects.append({
+                "clickup_id": new_product["id"],
+                "clickup_link": new_product["url"],
+                "hubspot_id": hubspot_product_id,
+                "sku": sku,
+            })
 
-
-
-        # TODO: Assign client id to hubspot project
-        print (f"Assigning client id ({client['id']}) to hubspot project")
-
-        # TODO: If send_slack_notification is true, send slack notification
-        if send_slack_notification:
-            print ("Sending slack notification")
-
-        # TODO: If send_email_notification is true, send email notification
-        if send_email_notification:
-            print ("Sending email notification")
-
-        return client
+        return {
+            "status": "ok",
+            "cif_nif": request.cif_nif,
+            "name": request.name,
+            "url": client["url"],
+            "projects": projects
+        }
 
 
 def create_webhook():
@@ -215,6 +224,7 @@ def update_custom_fields_in_subtask(parent_custom_fields: list[dict], subtask: d
             clickup_api_service.set_custom_field_to_task(subtask["id"], field_id, field_value, type=field_type)
 
     print (f"Finished updating fields in task '{subtask['name']}' in {time() - start_time} seconds")
+
 
 def sync_task(request: TaskUpdatedElement):
 
