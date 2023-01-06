@@ -21,7 +21,7 @@ class Utils:
 
     
     @staticmethod
-    def get_cif_nif_from_custom_fields(client_custom_fields: list, custom_fields: dict) -> dict:
+    def get_nif_cif_from_custom_fields(client_custom_fields: list, custom_fields: dict) -> dict:
         """Gets the CIF/NIF from the custom fields.
 
         Args:
@@ -32,17 +32,17 @@ class Utils:
         """
         # custom_fields = clickup_api_service.get_list_custom_fields(Config.CLICKUP_LIST_ID, as_name_id_dict=True)
 
-        cif_nif = {}
-        cif_nif_custom_field_id = Utils.get_custom_field_id_by_name(custom_fields, ClickUpCustomFields.CIF_NIF_CLIENTE)
+        nif_cif = {}
+        nif_cif_custom_field_id = Utils.get_custom_field_id_by_name(custom_fields, ClickUpCustomFields.CIF_NIF_CLIENTE)
         for field in client_custom_fields:
-            if field["id"] == cif_nif_custom_field_id:
-                cif_nif = {
+            if field["id"] == nif_cif_custom_field_id:
+                nif_cif = {
                     "id": field["id"],
                     "value": field["value"]
                 }
                 break
 
-        return cif_nif
+        return nif_cif
 
 
     @staticmethod
@@ -226,3 +226,16 @@ class Utils:
                 break
 
         return list_id
+
+
+    def get_template_id_for_product_by_sku(sku: str) -> str:
+        """Gets the right template id for product by sku.
+
+        Args:
+            sku (str): The sku of the product.
+
+        Returns:
+            str: The template id.
+        """
+        return Config.PROJECT_TEMPLATES[sku]
+        

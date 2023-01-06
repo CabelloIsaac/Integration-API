@@ -280,7 +280,7 @@ def build_click_up_payload(company, products, deal_id):
     click_up_payload = {
         "name": company['properties']['name'],
         "description": company['properties']['description'],
-        "cif_nif": company['properties']['cif_nif'],
+        "nif_cif": company['properties']['nif_cif'],
         "cs_owner": owner_email,
         "hubspot_deal_id": deal_id,
         "products": products,

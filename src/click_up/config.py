@@ -16,6 +16,16 @@ class Config():
     
     CLICKUP_PRODUCTOS_FOLDER_ID = os.getenv('CLICKUP_PRODUCTOS_FOLDER_ID', "")
 
+    # TEMPLATES
+    NEW_CLIENT_TEMPLATE_ID = "t-865bcmheb"
+    PROJECT_TEMPLATES = {
+        "KD-ANLT": "t-865bezne9",
+        "KD-ECOM": "t-865beznb5",
+        "KD-RRSS": "t-865bezmtv",
+        "KD-SEO": "t-865bezmkb",
+        "KD-WEB": "t-865bezmqp",
+    }
+
     FIELDS_TO_UPDATE_WHEN_UPDATE_PROJECT = [
         ClickUpCustomFields.CS_MANAGER,
         ClickUpCustomFields.ESTADO_PROYECTO,

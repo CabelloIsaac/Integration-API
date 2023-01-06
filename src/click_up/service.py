@@ -111,7 +111,7 @@ class ClickUpApiService:
         return response.json()
 
 
-    def update_task(self, task_id, task):
+    def update_task(self, task_id, data):
         """Update a task
         Args:
             task_id (str): The task id
@@ -119,7 +119,7 @@ class ClickUpApiService:
         Returns:
             dict: The task updated"""
         url = f"{self.api_prefix}/task/{task_id}"
-        data = json.dumps(task)
+        data = json.dumps(data)
         response = requests.put( url, headers=self.headers, data=data)
         return response.json()
 
@@ -145,6 +145,8 @@ class ClickUpApiService:
             value (str): The value to set
         Returns:
             dict: The task updated"""
+
+        print (f"Setting field {field_id} to {value} for task {task_id}")
         url = f"{self.api_prefix}/task/{task_id}/field/{field_id}"
 
         formatted_value = {"value": value}

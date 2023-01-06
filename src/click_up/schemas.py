@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 class ClientBase(BaseModel):
     name: str
-    cif_nif: str
+    nif_cif: str
     cs_owner: str
     products: Optional[list[dict]]
     custom_fields: Optional[list[dict]]

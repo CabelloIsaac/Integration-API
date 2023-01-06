@@ -49,7 +49,7 @@ Also:
 {
   "name": "Test client",
   "description": "Test client description",
-  "cif_nif": "12345678B",
+  "nif_cif": "12345678B",
   "cs_owner": "desarrollo.isaac@alotofpipol.com",
   "send_slack_notification": true,
   "send_email_notification": true,
