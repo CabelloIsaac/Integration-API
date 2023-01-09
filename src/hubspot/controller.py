@@ -276,6 +276,7 @@ def build_click_up_payload(company, products, deal_id):
     owner_id = company["properties"]["hubspot_owner_id"]
     owner = get_owner_by_id(owner_id=owner_id)
     owner_email = owner["email"]
+    enlace_hubspot = build_enlace_hubspot(company_id=company['id'])
 
     click_up_payload = {
         "name": company['properties']['name'],
@@ -288,8 +289,17 @@ def build_click_up_payload(company, products, deal_id):
             {
                 "name": ClickUpCustomFields.ID_CLIENTE_HUBSPOT,
                 "value": company['id']
+            },
+            {
+                "name": ClickUpCustomFields.ENLACE_HUBSPOT,
+                "value": enlace_hubspot
             }
         ]
     }
 
     return click_up_payload
+
+
+def build_enlace_hubspot(company_id):
+    hubspot_user_id = Config.HUBSPOT_USER_ID
+    return f"https://app.hubspot.com/contacts/{hubspot_user_id}/company/{company_id}"
