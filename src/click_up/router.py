@@ -15,7 +15,7 @@ router = APIRouter(
     response_description="The client created",
 )
 def create_client(request: ClientBase):
-    return controller.create_client(request=request)
+    return controller.sync_client(request=request)
 
 
 @router.get(

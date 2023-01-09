@@ -58,35 +58,11 @@ def check_client_exists (custom_fields, nif_cif_cliente):
     return found_client
 
 
-def create_client(request: ClientBase):
-
-    custom_fields = clickup_api_service.get_list_custom_fields(Config.CLICKUP_CLIENTES_LIST_ID)["fields"]
-    product_lists = clickup_api_service.get_lists_from_folder(Config.CLICKUP_PRODUCTOS_FOLDER_ID)["lists"]
-
-    client_exists = check_client_exists(custom_fields, request.nif_cif)
-
-    if client_exists:
-        # if exists, take the current it to add projects
-        print (f"Client already exists at {client_exists['url']}")
-        return {
-            "status": "error",
-            "error": "Client already exists",
-            "nif_cif": request.nif_cif,
-            "name": request.name,
-            "url": client_exists["url"]            
-        }
-    else:
-
-        print (f"Creating client {request.name}")
-
-        # Get data from request
-        client_name = request.name.upper()
-        cs_owner = request.cs_owner
-        client_custom_fields = request.custom_fields
-        products = request.products
+def create_client(client_name, cs_owner, custom_fields, client_custom_fields, nif_cif_cliente):
+        print (f"Creating client {client_name}")
 
         # Build client name
-        client_full_name = Utils.build_client_name(cifNif=request.nif_cif, name=client_name)
+        client_full_name = Utils.build_client_name(cifNif=nif_cif_cliente, name=client_name)
         client_full_name = client_full_name.upper()
 
         # Get CS owner id
@@ -96,7 +72,7 @@ def create_client(request: ClientBase):
         # Add CIF/NIF to client custom fields
         client_custom_fields.append({
             "name": ClickUpCustomFields.CIF_NIF_CLIENTE,
-            "value": request.nif_cif
+            "value": nif_cif_cliente
         })
 
         # Build client custom fields
@@ -119,9 +95,10 @@ def create_client(request: ClientBase):
         if "id" not in client:
             print (f"Error creating client {client_name}")
             return {
+                "status": "error",
                 "error": "Error creating client",
-                "nif_cif": request.nif_cif,
-                "name": request.name,
+                "nif_cif": nif_cif_cliente,
+                "name": client_name,
                 "error_message": client
             }
 
@@ -140,99 +117,135 @@ def create_client(request: ClientBase):
         # Apply custom fields to client
         set_custom_fields_to_task(task_id=client_id, custom_fields=client_custom_fields)
 
-        projects = [] # Projects to be returned to Hubspot
+        return client
 
-        # Create products
-        for product in products:
-            sku = product["sku"]
-            hubspot_product_id = product["id"]
-            product_name = f"{sku}: {client_name}"
-            list_id = Utils.get_list_id_for_product_by_sku(lists=product_lists, sku=sku)
-            template_id = Utils.get_template_id_for_product_by_sku(sku=sku)
 
-            print (f"Creating product {product_name} in list {list_id} with template {template_id}")
+def sync_client(request: ClientBase):
 
-            if list_id is None:
-                print (f"Error creating product {product_name}: list not found")
-                return {
-                    "error": "Error creating product",
-                    "nif_cif": request.nif_cif,
-                    "name": request.name,
-                    "error_message": f"Error creating product {product_name}: list not found"
-                }
+    custom_fields = clickup_api_service.get_list_custom_fields(Config.CLICKUP_CLIENTES_LIST_ID)["fields"]
+    product_lists = clickup_api_service.get_lists_from_folder(Config.CLICKUP_PRODUCTOS_FOLDER_ID)["lists"]
 
-            product_custom_fields = [
-                {
-                    "name": ClickUpCustomFields.ESTADO_PROYECTO,
-                    "value": "PREPARADOS (EN ESPERA)"
-                },
-                {
-                    "name": ClickUpCustomFields.PRODUCTO,
-                    "value": Utils.get_tipo_proyecto_name_by_key(sku)
-                },
-                {
-                    "name": ClickUpCustomFields.TIPO_ITEM_CLICKUP,
-                    "value": "Proyecto"
-                },
+    client_exists = check_client_exists(custom_fields, request.nif_cif)
 
-            ]
-            product_custom_fields = Utils.build_client_custom_fields(product_custom_fields, custom_fields)
+    client_name = request.name.upper()
+    cs_owner = request.cs_owner
+    products = request.products
 
-            new_product = {
-                "name": product_name,
-                "status": "to do",
-                # "custom_fields": product_custom_fields,
+    client = {}
+
+    if client_exists:
+        # if exists, take the current it to add projects
+        print (f"Client already exists at {client_exists['url']}")
+        client = client_exists
+    else:
+        client = create_client(
+            client_name=client_name,
+            cs_owner=cs_owner,
+            custom_fields=custom_fields,
+            client_custom_fields=request.custom_fields,
+            nif_cif_cliente=request.nif_cif
+        )
+
+    if "id" not in client:
+        return client
+
+    client_id = client["id"]
+    client_url = client["url"]
+    cs_owner_id = Utils.get_member_id_by_email(members=client["assignees"], email=cs_owner)
+
+    projects = [] # Projects to be returned to Hubspot
+
+    # Create products
+    for product in products:
+        sku = product["sku"]
+        hubspot_product_id = product["id"]
+        product_name = f"{sku}: {client_name}"
+        list_id = Utils.get_list_id_for_product_by_sku(lists=product_lists, sku=sku)
+        template_id = Utils.get_template_id_for_product_by_sku(sku=sku)
+
+        print (f"Creating product {product_name} in list {list_id} with template {template_id}")
+
+        if list_id is None:
+            print (f"Error creating product {product_name}: list not found")
+            return {
+                "error": "Error creating product",
+                "nif_cif": request.nif_cif,
+                "name": request.name,
+                "error_message": f"Error creating product {product_name}: list not found"
             }
 
-            # new_product = clickup_api_service.create_task(list_id, new_product)
-            new_product = clickup_api_service.create_task_from_template(
-                list_id=list_id,
-                template_id=template_id,
-                task=new_product
-            )
+        product_custom_fields = [
+            {
+                "name": ClickUpCustomFields.ESTADO_PROYECTO,
+                "value": "PREPARADOS (EN ESPERA)"
+            },
+            {
+                "name": ClickUpCustomFields.PRODUCTO,
+                "value": Utils.get_tipo_proyecto_name_by_key(sku)
+            },
+            {
+                "name": ClickUpCustomFields.TIPO_ITEM_CLICKUP,
+                "value": "Proyecto"
+            },
 
-            if "id" not in new_product:
-                print (f"Error creating product {product_name}")
-                return {
-                    "status": "error",
-                    "error": "Error creating product",
-                    "nif_cif": request.nif_cif,
-                    "name": request.name,
-                    "error_message": new_product
-                }
+        ]
+        product_custom_fields = Utils.build_client_custom_fields(product_custom_fields, custom_fields)
 
-            new_product_id = new_product["id"]
-            new_product_url = new_product["task"]["url"]
-
-            print (f"Product {product_name} ({new_product_id}) created at {new_product_url}")
-            
-            # Apply assignees to product
-            print (f"Assigning {cs_owner} as owner of product {product_name}")
-            new_product = clickup_api_service.update_task(task_id=new_product_id, data={
-                "assignees": {
-                    "add": [cs_owner_id]
-                }
-            })
-
-            # Apply custom fields to product
-            set_custom_fields_to_task(task_id=new_product_id, custom_fields=product_custom_fields)
-
-            clickup_api_service.add_task_link(client_id, new_product_id)
-
-            projects.append({
-                "clickup_id": new_product_id,
-                "clickup_link": new_product_url,
-                "hubspot_id": hubspot_product_id,
-                "sku": sku,
-            })
-
-        return {
-            "status": "ok",
-            "nif_cif": request.nif_cif,
-            "name": request.name,
-            "url": client_url,
-            "projects": projects
+        new_product = {
+            "name": product_name,
+            "status": "to do",
+            # "custom_fields": product_custom_fields,
         }
+
+        # new_product = clickup_api_service.create_task(list_id, new_product)
+        new_product = clickup_api_service.create_task_from_template(
+            list_id=list_id,
+            template_id=template_id,
+            task=new_product
+        )
+
+        if "id" not in new_product:
+            print (f"Error creating product {product_name}")
+            return {
+                "status": "error",
+                "error": "Error creating product",
+                "nif_cif": request.nif_cif,
+                "name": request.name,
+                "error_message": new_product
+            }
+
+        new_product_id = new_product["id"]
+        new_product_url = new_product["task"]["url"]
+
+        print (f"Product {product_name} ({new_product_id}) created at {new_product_url}")
+        
+        # Apply assignees to product
+        print (f"Assigning {cs_owner} as owner of product {product_name}")
+        new_product = clickup_api_service.update_task(task_id=new_product_id, data={
+            "assignees": {
+                "add": [cs_owner_id]
+            }
+        })
+
+        # Apply custom fields to product
+        set_custom_fields_to_task(task_id=new_product_id, custom_fields=product_custom_fields)
+
+        clickup_api_service.add_task_link(client_id, new_product_id)
+
+        projects.append({
+            "clickup_id": new_product_id,
+            "clickup_link": new_product_url,
+            "hubspot_id": hubspot_product_id,
+            "sku": sku,
+        })
+
+    return {
+        "status": "ok",
+        "nif_cif": request.nif_cif,
+        "name": request.name,
+        "url": client_url,
+        "projects": projects
+    }
 
 
 def create_webhook():

@@ -14,7 +14,7 @@ def sync_clients():
     processed_click_up_clients = []
 
     for click_up_client in click_up_clients:
-        processed_click_up_client = click_up_controller.create_client(ClientBase(**click_up_client))
+        processed_click_up_client = click_up_controller.sync_client(ClientBase(**click_up_client))
         processed_click_up_clients.append(processed_click_up_client)
 
     for processed_click_up_client in processed_click_up_clients:
