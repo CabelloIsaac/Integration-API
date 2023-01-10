@@ -10,6 +10,15 @@ from ..hubspot import controller as hubspot_controller
 
 
 def build_nif_cif_cliente_for_checking_if_exists(nif_cif_cliente_field_id: str, nif_cif_cliente:str):
+    """
+    Build the custom fields to check if a client exists
+
+    Args:
+        nif_cif_cliente_field_id (str): The CIF/NIF custom field id
+        nif_cif_cliente (str): The CIF/NIF value
+    Returns:
+        str: The custom fields to check if a client exists
+    """
     nif_cif_cliente_for_checking_if_exists = {}
 
     if nif_cif_cliente:
@@ -28,6 +37,7 @@ def build_nif_cif_cliente_for_checking_if_exists(nif_cif_cliente_field_id: str, 
 def set_custom_fields_to_task(task_id, custom_fields:list[dict]):
     """
     Set custom fields to a task
+
     Args:
         task_id (str): The task id
         custom_fields (list[dict]): The custom fields to set
@@ -38,12 +48,21 @@ def set_custom_fields_to_task(task_id, custom_fields:list[dict]):
         clickup_api_service.set_custom_field_to_task(task_id=task_id, field_id=custom_field_id, value=custom_field_value)
 
 
-def check_client_exists (custom_fields, nif_cif_cliente):
+def check_client_exists(custom_fields, nif_cif_cliente):
+    """
+    Check if a client exists
+
+    Args:
+        custom_fields (list[dict]): The custom fields
+        nif_cif_cliente (str): The CIF/NIF value
+    Returns:
+        dict: The client if exists, None otherwise
+    """
     nif_cif_cliente_field_id = Utils.get_custom_field_id_by_name(custom_fields, ClickUpCustomFields.CIF_NIF_CLIENTE)
     nif_cif_cliente_for_checking_if_exists = build_nif_cif_cliente_for_checking_if_exists(nif_cif_cliente_field_id, nif_cif_cliente)
 
     clients = clickup_api_service.get_tasks(
-        Config.CLICKUP_CLIENTES_LIST_ID,
+        Config.CLIENTES_LIST_ID,
         include_closed=True,
         custom_fields=nif_cif_cliente_for_checking_if_exists
     )["tasks"]
@@ -60,77 +79,98 @@ def check_client_exists (custom_fields, nif_cif_cliente):
 
 
 def create_client(client_name, cs_owner, custom_fields, client_custom_fields, nif_cif_cliente):
-        print (f"Creating client {client_name}")
+    """
+    Create a client
 
-        # Build client name
-        client_full_name = Utils.build_client_name(cifNif=nif_cif_cliente, name=client_name)
-        client_full_name = client_full_name.upper()
+    Args:
+        client_name (str): The client name
+        cs_owner (str): The CS owner email
+        custom_fields (list[dict]): The custom fields
+        client_custom_fields (list[dict]): The client custom fields
+        nif_cif_cliente (str): The CIF/NIF value
 
-        # Get CS owner id
-        members = clickup_api_service.get_list_members(Config.CLICKUP_CLIENTES_LIST_ID)["members"]
-        cs_owner_id = Utils.get_member_id_by_email(members=members, email=cs_owner)
+    Returns:
+        dict: The client if exists, None otherwise
+    """
+    print (f"Creating client {client_name}")
 
-        # Add CIF/NIF to client custom fields
-        client_custom_fields.append({
-            "name": ClickUpCustomFields.CIF_NIF_CLIENTE,
-            "value": nif_cif_cliente
-        })
+    # Build client name
+    client_full_name = Utils.build_client_name(cifNif=nif_cif_cliente, name=client_name)
 
-        # Build client custom fields
-        client_custom_fields = Utils.build_client_custom_fields(client_custom_fields, custom_fields)
+    # Get CS owner id
+    members = clickup_api_service.get_list_members(Config.CLIENTES_LIST_ID)["members"]
+    cs_owner_id = Utils.get_member_id_by_email(members=members, email=cs_owner)
 
-        # Build client object
-        client = {
-            "name": client_full_name,
-            "status": Config.CLICK_UP_NEW_CLIENT_STATUS,
+    # Add NIF/CIF to client custom fields
+    client_custom_fields.append({
+        "name": ClickUpCustomFields.CIF_NIF_CLIENTE,
+        "value": nif_cif_cliente
+    })
+
+    # Build client custom fields
+    client_custom_fields = Utils.build_client_custom_fields(client_custom_fields, custom_fields)
+
+    # Build client object
+    client = {
+        "name": client_full_name,
+        "status": Config.NEW_CLIENT_STATUS,
+    }
+
+    # Create client
+    client = clickup_api_service.create_task_from_template(
+        list_id=Config.CLIENTES_LIST_ID,
+        template_id=Config.NEW_CLIENT_TEMPLATE_ID,
+        task=client
+    )
+
+    # The task could not be created
+    if "id" not in client:
+        print (f"Error creating client {client_name}")
+        return {
+            "status": "error",
+            "error": "Error creating client",
+            "nif_cif": nif_cif_cliente,
+            "name": client_name,
+            "error_message": client
         }
 
-        # Create client
-        client = clickup_api_service.create_task_from_template(
-            list_id=Config.CLICKUP_CLIENTES_LIST_ID,
-            template_id=Config.NEW_CLIENT_TEMPLATE_ID,
-            task=client
-        )
+    client_id = client["id"]
+    client_url = client["task"]["url"]
 
-        # The task could not be created
-        if "id" not in client:
-            print (f"Error creating client {client_name}")
-            return {
-                "status": "error",
-                "error": "Error creating client",
-                "nif_cif": nif_cif_cliente,
-                "name": client_name,
-                "error_message": client
-            }
+    print (f"Client {client_name} ({client_id}) created at {client_url}")
 
-        client_id = client["id"]
-        client_url = client["task"]["url"]
+    # Apply assignees to client
+    client = clickup_api_service.update_task(task_id=client_id, data={
+        "assignees": {
+            "add": [cs_owner_id]
+        }
+    })
 
-        print (f"Client {client_name} ({client_id}) created at {client_url}")
+    # Apply custom fields to client
+    set_custom_fields_to_task(task_id=client_id, custom_fields=client_custom_fields)
 
-        # Apply assignees to client
-        client = clickup_api_service.update_task(task_id=client_id, data={
-            "assignees": {
-                "add": [cs_owner_id]
-            }
-        })
-
-        # Apply custom fields to client
-        set_custom_fields_to_task(task_id=client_id, custom_fields=client_custom_fields)
-
-        return client
+    return client
 
 
 def sync_client(request: ClientBase):
+    """
+    Create or update a client in ClickUp from a request object (ClientBase)
+    Steps: 
+        - Check if client exists
+        - If exists, add projects to it
+        - If not exists, create it and add projects to it
+    
+    Args:
+        request (ClientBase): The request object
+    """
 
-    custom_fields = clickup_api_service.get_list_custom_fields(Config.CLICKUP_CLIENTES_LIST_ID)["fields"]
-    product_lists = clickup_api_service.get_lists_from_folder(Config.CLICKUP_PRODUCTOS_FOLDER_ID)["lists"]
+    custom_fields = clickup_api_service.get_list_custom_fields(Config.CLIENTES_LIST_ID)["fields"]
+    product_lists = clickup_api_service.get_lists_from_folder(Config.PRODUCTOS_FOLDER_ID)["lists"]
 
     client_exists = check_client_exists(custom_fields, request.nif_cif)
 
     client_name = request.name.upper()
     cs_owner = request.cs_owner
-    products = request.products
 
     client = {}
 
@@ -153,6 +193,7 @@ def sync_client(request: ClientBase):
     client_id = client["id"]
     client_url = client["url"]
     cs_owner_id = Utils.get_member_id_by_email(members=client["assignees"], email=cs_owner)
+    products = request.products
 
     projects = [] # Projects to be returned to Hubspot
 
@@ -169,6 +210,7 @@ def sync_client(request: ClientBase):
         if list_id is None:
             print (f"Error creating product {product_name}: list not found")
             return {
+                "status": "error",
                 "error": "Error creating product",
                 "nif_cif": request.nif_cif,
                 "name": request.name,
@@ -190,15 +232,14 @@ def sync_client(request: ClientBase):
             }
 
         ]
+
         product_custom_fields = Utils.build_client_custom_fields(product_custom_fields, custom_fields)
 
         new_product = {
             "name": product_name,
-            "status": "to do",
-            # "custom_fields": product_custom_fields,
+            "status": Config.NEW_PROJECT_STATUS,
         }
 
-        # new_product = clickup_api_service.create_task(list_id, new_product)
         new_product = clickup_api_service.create_task_from_template(
             list_id=list_id,
             template_id=template_id,
@@ -217,7 +258,6 @@ def sync_client(request: ClientBase):
 
         new_product_id = new_product["id"]
         new_product_url = new_product["task"]["url"]
-        new_product_status = new_product["task"]["status"]["status"]
 
         print (f"Product {product_name} ({new_product_id}) created at {new_product_url}")
         
@@ -232,6 +272,7 @@ def sync_client(request: ClientBase):
         # Apply custom fields to product
         set_custom_fields_to_task(task_id=new_product_id, custom_fields=product_custom_fields)
 
+        # Link product to client
         clickup_api_service.add_task_link(client_id, new_product_id)
 
         projects.append({
@@ -257,7 +298,7 @@ def create_webhook():
     delete_webooks = False
 
     # Get all webhooks in team
-    webhooks = clickup_api_service.get_webhooks(Config.CLICKUP_TEAM_ID)["webhooks"]
+    webhooks = clickup_api_service.get_webhooks(Config.TEAM_ID)["webhooks"]
 
     # Check if webhook exists
     webhook_exists = False
@@ -279,9 +320,9 @@ def create_webhook():
                 "taskCreated",
                 "taskUpdated",
             ],
-            "space_id": Config.CLICKUP_CLIENTES_SPACE_ID,
+            "space_id": Config.CLIENTES_SPACE_ID,
         }
-        webhook = clickup_api_service.create_webhook(Config.CLICKUP_TEAM_ID, webhook)
+        webhook = clickup_api_service.create_webhook(Config.TEAM_ID, webhook)
         if "id" not in webhook:
             print ("Error creating webhook")
             print (webhook)
@@ -291,32 +332,8 @@ def create_webhook():
             print (webhook)
 
 
-def update_custom_fields_in_subtask(parent_custom_fields: list[dict], subtask: dict):
-    fields_to_update = {}
-    
-    start_time = time()
-                
-    for parent_custom_field in parent_custom_fields:
-        field_name = parent_custom_field["name"]
-        
-        if field_name in Config.FIELDS_TO_UPDATE_WHEN_UPDATE_PROJECT:
-            field_value = Utils.get_custom_field_value_by_name(parent_custom_fields, field_name)    
-            fields_to_update[field_name] = field_value
-
-    print (f"\nUpdating fields in task '{subtask['name']}':")
-    for field_to_update in fields_to_update:
-        field_id = Utils.get_custom_field_id_by_name(parent_custom_fields, field_to_update)
-        field_name = field_to_update
-        field_value = fields_to_update[field_to_update]
-        field_type = Utils.get_custom_field_type_by_id(parent_custom_fields, field_id)
-
-        if field_id != "" and field_value != "":
-            clickup_api_service.set_custom_field_to_task(subtask["id"], field_id, field_value, type=field_type)
-
-    print (f"Finished updating fields in task '{subtask['name']}' in {time() - start_time} seconds")
-
-
 def sync_task(request: TaskUpdatedElement):
+    """Syncs a task with its subtasks"""
 
     start_time = time()
 
@@ -374,6 +391,31 @@ def sync_task(request: TaskUpdatedElement):
     return response
 
 
+def update_custom_fields_in_subtask(parent_custom_fields: list[dict], subtask: dict):
+    fields_to_update = {}
+    
+    start_time = time()
+                
+    for parent_custom_field in parent_custom_fields:
+        field_name = parent_custom_field["name"]
+        
+        if field_name in Config.FIELDS_TO_UPDATE_WHEN_UPDATE_PROJECT:
+            field_value = Utils.get_custom_field_value_by_name(parent_custom_fields, field_name)    
+            fields_to_update[field_name] = field_value
+
+    print (f"\nUpdating fields in task '{subtask['name']}':")
+    for field_to_update in fields_to_update:
+        field_id = Utils.get_custom_field_id_by_name(parent_custom_fields, field_to_update)
+        field_name = field_to_update
+        field_value = fields_to_update[field_to_update]
+        field_type = Utils.get_custom_field_type_by_id(parent_custom_fields, field_id)
+
+        if field_id != "" and field_value != "":
+            clickup_api_service.set_custom_field_to_task(subtask["id"], field_id, field_value, type=field_type)
+
+    print (f"Finished updating fields in task '{subtask['name']}' in {time() - start_time} seconds")
+
+
 def sync_all_tasks():
 
     start_time = time()
@@ -384,7 +426,7 @@ def sync_all_tasks():
     create_webhook()
 
     # Get lists from folder
-    lists = clickup_api_service.get_lists_from_folder(Config.CLICKUP_PRODUCTOS_FOLDER_ID)["lists"]
+    lists = clickup_api_service.get_lists_from_folder(Config.PRODUCTOS_FOLDER_ID)["lists"]
 
     # Get tasks from each list
     for list in lists:

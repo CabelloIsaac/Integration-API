@@ -24,7 +24,7 @@ def create_client(request: ClientBase):
     description="Fixes tasks in ClickUp updating the projects with the client data",
     response_description="Count of tasks fixed",
 )
-def fix_tasks():
+def sync_all_tasks():
     return controller.sync_all_tasks()
 
 
@@ -34,5 +34,5 @@ def fix_tasks():
     description="Fixes tasks in ClickUp updating the projects with the client data",
     response_description="Count of tasks fixed",
 )
-def fix_tasks(request: TaskUpdatedElement):
+def sync_task(request: TaskUpdatedElement):
     return controller.sync_task(request=request)

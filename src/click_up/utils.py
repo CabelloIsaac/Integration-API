@@ -15,9 +15,9 @@ class Utils:
             client (ClientBase): The client data.
 
         Returns:
-            str: The client name.
+            str: The client name in the format "CLIENTE: 1234_NAME".
         """
-        return f"CLIENTE: {cifNif}_{name}"
+        return f"CLIENTE: {cifNif}_{name}".upper()
 
     
     @staticmethod
@@ -106,14 +106,20 @@ class Utils:
 
     @staticmethod
     def build_client_custom_fields(client_custom_fields: list[dict], custom_fields: list[dict]) -> list:
-        """Builds the client custom fields from the client data.
+        """Builds the client custom fields from the client data and the custom fields available in click up.
 
         Args:
             client_custom_fields (list): The client custom fields.
             custom_fields (list): The custom fields available in click up.
 
         Returns:
-            list: The client custom fields.
+            list: The client custom fields in a way that click up can understand.
+            Example: [
+                {
+                    "id": "123456789",
+                    "value": "1234"
+                },
+            ]
         """
         new_client_custom_fields = []
 
@@ -214,7 +220,7 @@ class Utils:
 
 
     def get_list_id_for_product_by_sku(lists: list[dict], sku: str) -> str:
-        """Gets the right list id for product by sku.
+        """Gets the corresponding list id for product by sku.
 
         Args:
             lists (list): The lists in the team.
@@ -234,7 +240,7 @@ class Utils:
 
 
     def get_template_id_for_product_by_sku(sku: str) -> str:
-        """Gets the right template id for product by sku.
+        """Gets the corresponding template id for product by sku.
 
         Args:
             sku (str): The sku of the product.

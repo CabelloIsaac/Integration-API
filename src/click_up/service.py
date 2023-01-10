@@ -17,6 +17,10 @@ class ClickUpApiService:
             "Authorization": token
         }
 
+
+    # Custom fields
+
+
     def get_list_custom_fields(self, list_id, as_name_id_dict: bool = False):
         """Get all custom fields for a list
         Args:
@@ -37,7 +41,30 @@ class ClickUpApiService:
             return response.json()
 
 
+    def set_custom_field_to_task(self, task_id, field_id, value, type: str = None):
+        """Set a custom field to a task
+        Args:
+            task_id (str): The task id
+            field_id (str): The field id
+            value (str): The value to set
+        Returns:
+            dict: The task updated"""
+
+        print (f"Setting field {field_id} to {value} for task {task_id}")
+        url = f"{self.api_prefix}/task/{task_id}/field/{field_id}"
+
+        formatted_value = {"value": value}
+
+        if type == CustomFieldTypes.USERS:
+            users_id_list = [user["id"] for user in value]
+            formatted_value = {"value":{"add": users_id_list}}
+
+        data = json.dumps(formatted_value)
+        requests.post( url, headers=self.headers, data=data)
+      
+
     # Tasks
+
     
     def create_task(self, list_id, task):
         """Create a task in a list
@@ -104,7 +131,7 @@ class ClickUpApiService:
         query = {
             "include_subtasks": str(include_subtasks).lower(),
             "custom_task_ids": str(custom_task_ids).lower(),
-            "team_id": Config.CLICKUP_TEAM_ID,
+            "team_id": Config.TEAM_ID,
         }
 
         response = requests.get( url, headers=self.headers, params=query)
@@ -124,7 +151,19 @@ class ClickUpApiService:
         return response.json()
 
 
-    # Folders
+    def add_task_link(self, task_id, links_to):
+        """Add a link to a task
+        Args:
+            task_id (str): The task id
+            links_to (str): The task id to link to
+        Returns:
+            dict: The link created"""
+        url = f"{self.api_prefix}/task/{task_id}/link/{links_to}"
+        response = requests.post( url, headers=self.headers)
+        return response.json()
+
+
+    # Lists
 
     def get_lists_from_folder(self, folder_id):
         """Get all lists in a folder
@@ -136,29 +175,7 @@ class ClickUpApiService:
         response = requests.get( url, headers=self.headers)
         return response.json()
 
-
-    def set_custom_field_to_task(self, task_id, field_id, value, type: str = None):
-        """Set a custom field to a task
-        Args:
-            task_id (str): The task id
-            field_id (str): The field id
-            value (str): The value to set
-        Returns:
-            dict: The task updated"""
-
-        print (f"Setting field {field_id} to {value} for task {task_id}")
-        url = f"{self.api_prefix}/task/{task_id}/field/{field_id}"
-
-        formatted_value = {"value": value}
-
-        if type == CustomFieldTypes.USERS:
-            users_id_list = [user["id"] for user in value]
-            formatted_value = {"value":{"add": users_id_list}}
-
-        data = json.dumps(formatted_value)
-        requests.post( url, headers=self.headers, data=data)
-        
-
+  
     def get_list_members(self, list_id):
         """Get all members in a list
         Args:
@@ -170,16 +187,7 @@ class ClickUpApiService:
         return response.json()
 
 
-    def add_task_link(self, task_id, links_to):
-        """Add a link to a task
-        Args:
-            task_id (str): The task id
-            links_to (str): The task id to link to
-        Returns:
-            dict: The link created"""
-        url = f"{self.api_prefix}/task/{task_id}/link/{links_to}"
-        response = requests.post( url, headers=self.headers)
-        return response.json()
+    # Webhooks
 
 
     def create_webhook(self, team_id, webhook):
@@ -218,6 +226,6 @@ class ClickUpApiService:
 
 
 
-clickup_api_service = ClickUpApiService(Config.CLICKUP_ACCESS_TOKEN)
+clickup_api_service = ClickUpApiService(Config.ACCESS_TOKEN)
 
       
