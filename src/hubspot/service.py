@@ -275,6 +275,19 @@ class HubspotService:
             return None
 
 
+    def get_custom_objects(self, object_type, limit=100, after=None):
+        try:
+            response = self.client.crm.objects.basic_api.get_page(
+                object_type=object_type,
+                limit=limit,
+                properties=["clickup_id"],
+            )
+            return response.to_dict()
+        except ObjectApiException as e:
+            print("Exception when calling basic_api->get_page: %s\n" % e)
+            return None
+
+
     def update_custom_object(self, object_type:str, object_id, properties):
         simple_public_object_input = SimplePublicObjectInput(properties=properties)
 

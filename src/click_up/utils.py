@@ -188,7 +188,7 @@ class Utils:
 
 
     @staticmethod
-    def get_custom_field_value_by_name(custom_fields: list[dict], name: str) -> str:
+    def get_custom_field_value_by_name(custom_fields: list[dict], name: str, get_option_name: bool = False) -> str:
         """Gets the custom field value by name.
 
         Args:
@@ -204,6 +204,11 @@ class Utils:
                 if "value" in field:
                     custom_field_value = field["value"]
                 break
+
+        if get_option_name:
+            if "type" in field:
+                if field["type"] == "drop_down":
+                    custom_field_value = field["type_config"]["options"][int(custom_field_value)]["name"]
 
         return custom_field_value
 

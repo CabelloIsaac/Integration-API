@@ -6,6 +6,7 @@ from ..constants import ClickUpCustomFields
 from .schemas import ClientBase, TaskUpdatedElement
 from .service import clickup_api_service
 from .utils import Utils
+from ..hubspot import controller as hubspot_controller
 
 
 def build_nif_cif_cliente_for_checking_if_exists(nif_cif_cliente_field_id: str, nif_cif_cliente:str):
@@ -186,7 +187,7 @@ def sync_client(request: ClientBase):
             {
                 "name": ClickUpCustomFields.TIPO_ITEM_CLICKUP,
                 "value": "Proyecto"
-            },
+            }
 
         ]
         product_custom_fields = Utils.build_client_custom_fields(product_custom_fields, custom_fields)
@@ -216,6 +217,7 @@ def sync_client(request: ClientBase):
 
         new_product_id = new_product["id"]
         new_product_url = new_product["task"]["url"]
+        new_product_status = new_product["task"]["status"]["status"]
 
         print (f"Product {product_name} ({new_product_id}) created at {new_product_url}")
         
@@ -237,6 +239,7 @@ def sync_client(request: ClientBase):
             "clickup_link": new_product_url,
             "hubspot_id": hubspot_product_id,
             "sku": sku,
+            "clickup_project_status": "PREPARADOS (EN ESPERA)"
         })
 
     return {
@@ -327,6 +330,11 @@ def sync_task(request: TaskUpdatedElement):
 
     if "id" not in updated_task:
         return "Task not found"
+
+    # Send task status to Hubspot
+    updated_task_original_id = updated_task["id"]
+    status = Utils.get_custom_field_value_by_name(updated_task["custom_fields"], ClickUpCustomFields.ESTADO_PROYECTO, get_option_name=True)
+    hubspot_controller.set_click_up_status_in_project(click_up_status=status, click_up_id=updated_task_original_id)
 
     if "subtasks" not in updated_task:
         return "No subtasks found. Nothing to do."

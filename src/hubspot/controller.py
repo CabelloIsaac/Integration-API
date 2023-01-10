@@ -77,6 +77,38 @@ def get_deals():
     return deals
 
 
+def get_projects():
+    
+    after = None
+    is_last_page = False
+    projects = []
+
+    while not is_last_page:
+        try:
+            print (f"Getting projects after {after}")
+            response = hubspot_client.get_custom_objects(
+                object_type=Config.HUBSPOT_PROJECT_OBJECT_TYPE,
+                after=after
+            )
+            projects.extend(response["results"])
+
+            if response["paging"] is not None:
+                after = response["paging"]["next"]["after"]
+                print (after)
+            else:
+                print ("No more projects")
+                is_last_page = True
+                after = None
+
+        except KeyError:
+            print ("No more projects")
+            after = None
+            is_last_page = True
+            break
+
+    return projects
+
+
 def set_deal_as_added_to_clickup(deal_id):
     print (f"Setting deal {deal_id} as added to ClickUp")
     return hubspot_client.update_deal(deal_id=deal_id, properties={"estado_clickup": EstadoClickup.ANADIDO_A_CLICKUP})
@@ -124,10 +156,25 @@ def update_project(project):
     properties = {
         "clickup_id": project["clickup_id"],
         "clickup_link": project["clickup_link"],
+        "clickup_project_status": project["clickup_project_status"],
     }
     print (f"Updating project {project_id}")
     print (properties)
     return hubspot_client.update_custom_object(object_type=Config.HUBSPOT_PROJECT_OBJECT_TYPE, object_id=project_id, properties=properties)
+
+
+def set_click_up_status_in_project(click_up_status, click_up_id):
+    print (f"Setting ClickUp status {click_up_status} in project {click_up_id}")
+    properties = {
+        "clickup_project_status": click_up_status,
+    }
+    
+    projects = get_projects()
+    for project in projects:
+        if project["properties"]["clickup_id"] == click_up_id:
+            project_id = project["id"]
+            print (f"Updating project {project_id}")
+            hubspot_client.update_custom_object(object_type=Config.HUBSPOT_PROJECT_OBJECT_TYPE, object_id=project_id, properties=properties)
 
 
 def assign_cs_owner_to_company(company):
