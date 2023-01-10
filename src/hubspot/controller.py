@@ -15,6 +15,10 @@ def get_deal_quotes(deal_id):
     return hubspot_client.get_deal_associations(deal_id=deal_id, to_object_type=Associations.QUOTES)["results"]
 
 
+def get_quote(quote_id):
+    return hubspot_client.get_quote_by_id(quote_id=quote_id)
+
+
 def associate_contract_with_deal(deal_id, contract_id):
     print (f"Associating deal {deal_id} with contract {contract_id}")
     return hubspot_client.create_deal_association(deal_id=deal_id, to_object_type=Associations.CONTRACTS, to_object_id=contract_id)
@@ -183,7 +187,7 @@ def assign_cs_owner_to_company(company):
 
     if company is not None:
         current_company_owner_id = company["properties"]["hubspot_owner_id"]
-        if current_company_owner_id == "":
+        if current_company_owner_id is None or current_company_owner_id == "":
 
             cs_owner_id = get_random_cs_owner()
 
@@ -233,6 +237,11 @@ def process_deals():
             if company is None:
                 print ("Company not found. Skipping...")
                 continue
+
+            # If company does not have nif_cif, skip it
+            if company["properties"]["nif_cif"] is None or company["properties"]["nif_cif"] == "":
+                print ("Company has no nif_cif. Skipping...")
+                continue
             
             company = assign_cs_owner_to_company(company=company)
 
@@ -251,6 +260,12 @@ def process_deals():
             # If quote has no line_items, skip it
             if len(quote_line_items) == 0:
                 print (f"Quote '{quote_id}' has no line_items")
+                continue
+
+            # If quote is DRAFT, skip it
+            quote = get_quote(quote_id=quote_id)
+            if quote["properties"]["hs_status"] == "DRAFT":
+                print (f"Quote '{quote_id}' is DRAFT. Skipping...")
                 continue
 
             line_items_skus = []

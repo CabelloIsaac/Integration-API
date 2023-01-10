@@ -248,5 +248,8 @@ class Utils:
         Returns:
             str: The template id.
         """
-        return Config.PROJECT_TEMPLATES[sku]
+        if sku in Config.PROJECT_TEMPLATES:
+            return Config.PROJECT_TEMPLATES[sku]
+        else:
+            return None
         

@@ -26,4 +26,10 @@ def sync_clients():
     for click_up_client in click_up_clients:
         hubspot_controller.set_deal_as_added_to_clickup(deal_id=click_up_client["hubspot_deal_id"])
 
+    if len(processed_click_up_clients) == 0:
+        return {
+            "status": "ok",
+            "message": "No Deals to sync"
+        }
+
     return processed_click_up_clients

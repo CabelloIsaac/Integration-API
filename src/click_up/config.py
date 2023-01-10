@@ -25,6 +25,9 @@ class Config():
         "KD-RRSS": "t-865bezmtv",
         "KD-SEO": "t-865bezmkb",
         "KD-WEB": "t-865bezmqp",
+        "KD-PROC": "t-865bfg04g",
+        "KD-CRM": "t-865bfg4m5",
+        "KD-CUSTOM": "t-865bfg4g3"
     }
 
     FIELDS_TO_UPDATE_WHEN_UPDATE_PROJECT = [

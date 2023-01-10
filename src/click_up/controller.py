@@ -205,6 +205,16 @@ def sync_client(request: ClientBase):
         list_id = Utils.get_list_id_for_product_by_sku(lists=product_lists, sku=sku)
         template_id = Utils.get_template_id_for_product_by_sku(sku=sku)
 
+        if template_id is None:
+            print (f"Error creating product {product_name}: template not found")
+            return {
+                "status": "error",
+                "error": "Error creating product",
+                "nif_cif": request.nif_cif,
+                "name": request.name,
+                "error_message": f"Error creating product {product_name}: template not found"
+            }
+
         print (f"Creating product {product_name} in list {list_id} with template {template_id}")
 
         if list_id is None:
@@ -220,7 +230,7 @@ def sync_client(request: ClientBase):
         product_custom_fields = [
             {
                 "name": ClickUpCustomFields.ESTADO_PROYECTO,
-                "value": "PREPARADOS (EN ESPERA)"
+                "value": "DOCUMENTACIÓN"
             },
             {
                 "name": ClickUpCustomFields.PRODUCTO,
@@ -280,7 +290,7 @@ def sync_client(request: ClientBase):
             "clickup_link": new_product_url,
             "hubspot_id": hubspot_product_id,
             "sku": sku,
-            "clickup_project_status": "PREPARADOS (EN ESPERA)"
+            "clickup_project_status": "DOCUMENTACIÓN"
         })
 
     return {
