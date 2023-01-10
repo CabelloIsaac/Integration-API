@@ -1,6 +1,6 @@
-# test-clickup-api
+# Integration API
 
-This is a test project to test the ClickUp API.
+API to integrate with ClickUp, HubSpot and more.
 
 ## Setup
 
@@ -29,12 +29,40 @@ CLICKUP_PRODUCTOS_FOLDER_ID = ""
 uvicorn src.main:app --reload
 ```
 
-## Endpoints
+## Main Endpoints
+
+### GET /sync/clients
+
+Take the Deals from HubSpot with the "estado_clickup" property set to "Listo" and create the corresponding tasks and projects in ClickUp.
+
+How it works:
+
+#### HubSpot
+
+1. Get the deals from HubSpot with the "estado_clickup" property set to "Listo"
+2. For each deal:
+   1. Get the Quote associated with the deal
+   2. Create a Contract and link it to the Deal and the Company
+   3. Create the Projects in the Quote and link them to the Contract and Company
+   4. Send the data to the ClickUp module.
+
+#### ClickUp
+
+   1. Create the Client in ClickUp
+   2. Create the Products in ClickUp and link them to the Client
+   3. Returns the Products created in ClickUp to HubSpot
+
+#### HubSpot
+
+   1. Add the Products ids, url and status to the corresponding Project in HubSpot
+   2. Update the "estado_clickup" property of the Deal to "Añaadido a ClickUp"
+
+## Test Endpoints
 
 ### POST /clickup/client
 
 Create a new client. A client is a task in the list `Clientes` in the folder `Clientes` in the space `Clientes`.
-The id of the list, folder and space are defined in the `.env` file.
+The id of the list, folder and space are defined in the config.py file of the clickup module.
 
 Also:
 
@@ -47,23 +75,26 @@ Also:
 
 ```json
 {
-  "name": "Test client",
-  "description": "Test client description",
-  "nif_cif": "12345678B",
+  "name": "Test.com",
+  "description": "Online tests and testing for certification, practice tests, test making tools, medical testing and more.",
+  "nif_cif": "12345678A",
   "cs_owner": "desarrollo.isaac@alotofpipol.com",
   "send_slack_notification": true,
   "send_email_notification": true,
   "products": [
-    "KD-WEB"
+    {
+      "id": 3131923132,
+      "sku": "KD-ECOM"
+    },
+    {
+      "id": 3131923133,
+      "sku": "KD-RRSS"
+    }
   ],
   "custom_fields": [
     {
-      "name": "¿SUBVENCIÓN APROBADA?",
-      "value": "SÍ"
-    },
-    {
-      "name": "ENLACE HUBSPOT",
-      "value": "https://www.google.com/?hl=es"
+      "name": "ID_CLIENTE_HUBSPOT",
+      "value": "6753679830"
     }
   ]
 }
@@ -79,6 +110,8 @@ The PRODUCTOS folder is defined in the `.env` file.
 
 Sync the subtasks's custom fields with the parent task's custom fields.
 The task to sync is the one sent in the request.
+Also:
+  Updates the task status on the corresponding Project in HubSpot.
 
 #### Request
 
@@ -113,3 +146,13 @@ The task to sync is the one sent in the request.
   ]
 }
 ```
+
+### GET /hubspot/deals
+
+Get all the deals from HubSpot.
+
+### GET /hubspot/deals/process
+
+Process the deals from HubSpot.
+Get all the deals from HubSpot with the "estado_clickup" property set to "Listo" and create the corresponding Contract and Projects
+in the Quote associated with the deal.
