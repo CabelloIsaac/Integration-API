@@ -268,19 +268,30 @@ def process_deals():
                 print (f"Quote '{quote_id}' is DRAFT. Skipping...")
                 continue
 
-            line_items_skus = []
+            line_items_data = []
 
             # Loop through quote line_items
             for quote_line_item in quote_line_items:
                 line_item_id = quote_line_item["to_object_id"]
                 line_item = get_line_item_by_id(line_item_id=line_item_id)
                 line_item_sku = line_item["properties"]["hs_sku"]
-                line_items_skus.append({
+                line_item_name = line_item["properties"]["name"]
+                # print (line_item)
+                line_items_data.append({
                     "id": line_item_id,
-                    "sku": line_item_sku
+                    "sku": line_item_sku,
+                    "name": line_item_name,
                 })
 
-            print (f"Line items skus: {line_items_skus}")
+            print (f"Line items skus: {line_items_data}")
+
+            # Update Deal single_line_products_list field
+            single_line_products_list = Utils.build_single_line_products_list(line_items_data=line_items_data)
+            print (f"single_line_products_list: {single_line_products_list}")
+            properties = {
+                "single_line_products_list": single_line_products_list,
+            }
+            deal = hubspot_client.update_deal(deal_id=deal_id, properties=properties)
 
             # Create CONTRACT and link to COMPANY and DEAL
             contract = create_contract(contract_name=f"Contrato {deal_name}")
@@ -300,23 +311,23 @@ def process_deals():
             products = []
 
             # Create PROJECT for every line_item and link to COMPANY and CONTRACT
-            for line_item_sku in line_items_skus:
-                line_item_id = line_item_sku["id"]
-                line_item_sku = line_item_sku["sku"]
+            for line_item_data in line_items_data:
+                line_item_id = line_item_data["id"]
+                line_item_data = line_item_data["sku"]
 
-                project_name = Utils.build_project_name(sku=line_item_sku, deal_name=deal_name)
+                project_name = Utils.build_project_name(sku=line_item_data, deal_name=deal_name)
 
                 project = create_project(project_name=project_name)
                 if project is None:
                     print ("Project not created. Skipping...")
                     continue
 
-                print (f"\nProject created: {line_item_sku} - {project['id']}")
+                print (f"\nProject created: {line_item_data} - {project['id']}")
                 project_id = project["id"]
 
                 products.append({
                     "id": project_id,
-                    "sku": line_item_sku,
+                    "sku": line_item_data,
                 })
 
                 # Update COMPANY with PROJECT
