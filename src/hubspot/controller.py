@@ -123,16 +123,72 @@ def get_company(company_id):
 
 
 def get_owner_by_email(email):
-    return hubspot_client.get_owners(email=email)["results"][0]
+    results = hubspot_client.get_owners(email=email)["results"]
+    if len(results) > 0:
+        return results[0]
+    return None
 
 
 def get_owner_by_id(owner_id):
     return hubspot_client.get_owner_by_id(owner_id=owner_id)
 
 
-def get_random_cs_owner():
-    cs_owner_email = random.choice(Config.CS_OWNERS_EMAILS)
+def pick_cs_owner_based_on_line_items(line_items_data: list):
+    
+    print ("\nPicking CS owner based on line items")
+    
+    line_item_skus = [line_item["sku"] for line_item in line_items_data]
+    # line_item_skus.append("KD-RRSS")
+    # line_item_skus.append("KD-WEB")
+    # line_item_skus.append("KD-ECOM")
+    
+    print (f"Line item SKUs: {line_item_skus}")
+    
+    cs_owners_data = Config.CS_OWNERS_DATA
+    
+    if len(line_item_skus) == 1:
+        # Se asigna al CS owner especialista en el producto
+        print (f"Assigning to CS owner expert in product {line_item_skus[0]}")
+        
+        for cs_owner_data in cs_owners_data:
+            if line_item_skus[0] in cs_owner_data["products"]:
+                cs_owner_email = cs_owner_data["email"]
+                break
+    
+    elif len(line_item_skus) % 2 == 0:
+        # Se asigna a un CS owner de forma aleatoria
+        print ("Assigning to random CS owner")
+        
+        random_cs_owner_data = random.choice(cs_owners_data)
+        cs_owner_email = random_cs_owner_data["email"]
+    
+    elif len(line_item_skus) % 2 != 0:
+        # Se asigna al CS Owner con más especialidades
+        print ("Assigning to CS owner with more specialities")
+        
+        counters = {}
+        for line_item_sku in line_item_skus:
+            for cs_owner_data in cs_owners_data:
+                if line_item_sku in cs_owner_data["products"]:
+                    if cs_owner_data["email"] in counters:
+                        counters[cs_owner_data["email"]] += 1
+                    else:
+                        counters[cs_owner_data["email"]] = 1
+    
+        print (f"Counters: {counters}")
+        
+        # Se obtiene el CS Owner con más especialidades
+        for counter in counters:
+            if counters[counter] == max(counters.values()):
+                cs_owner_email = counter
+                break
+    
     cs_owner = get_owner_by_email(cs_owner_email)
+    
+    if cs_owner is None:
+        print (f"CS Owner {cs_owner_email} not found")
+        return None
+    
     cs_owner_id = cs_owner["id"]
 
     print (f"Got {cs_owner_email} ({cs_owner_id})")
@@ -181,20 +237,23 @@ def set_click_up_status_in_project(click_up_status, click_up_id):
             hubspot_client.update_custom_object(object_type=Config.HUBSPOT_PROJECT_OBJECT_TYPE, object_id=project_id, properties=properties)
 
 
-def assign_cs_owner_to_company(company):
+def assign_cs_owner_to_company(company, line_items_data: list[dict]):
 
     company_id = company["id"]
+    
+    cs_owner_id = pick_cs_owner_based_on_line_items(line_items_data=line_items_data)
+    
 
     if company is not None:
-        current_company_owner_id = company["properties"]["hubspot_owner_id"]
+        current_company_owner_id = company["properties"]["c_s__owner"]
         if current_company_owner_id is None or current_company_owner_id == "":
 
-            cs_owner_id = get_random_cs_owner()
+            cs_owner_id = pick_cs_owner_based_on_line_items(line_items_data=line_items_data)
 
             print (f"Assigning company owner: {cs_owner_id}")
-            properties = {"hubspot_owner_id": cs_owner_id}
+            properties = {"c_s__owner": cs_owner_id}
             company = hubspot_client.update_company(company_id=company_id, properties=properties)
-            print (f"New company owner: {company['properties']['hubspot_owner_id']}")
+            print (f"New company owner: {company['properties']['c_s__owner']}")
         else:
             print (f"Company {company['properties']['name']} already has an owner: {current_company_owner_id}")
         return company
@@ -242,8 +301,6 @@ def process_deals():
             if company["properties"]["nif_cif"] is None or company["properties"]["nif_cif"] == "":
                 print ("Company has no nif_cif. Skipping...")
                 continue
-            
-            company = assign_cs_owner_to_company(company=company)
 
             deal_quotes = get_deal_quotes(deal_id)
 
@@ -292,6 +349,11 @@ def process_deals():
                 "single_line_products_list": single_line_products_list,
             }
             deal = hubspot_client.update_deal(deal_id=deal_id, properties=properties)
+            
+            
+            # Assign CS Owner to COMPANY based on line_items
+            company = assign_cs_owner_to_company(company=company, line_items_data=line_items_data)
+            return company
 
             # Create CONTRACT and link to COMPANY and DEAL
             contract = create_contract(contract_name=f"Contrato {deal_name}")
@@ -346,7 +408,7 @@ def process_deals():
 
 def build_click_up_payload(company, products, deal_id):
 
-    owner_id = company["properties"]["hubspot_owner_id"]
+    owner_id = company["properties"]["c_s__owner"]
     owner = get_owner_by_id(owner_id=owner_id)
     owner_email = owner["email"]
     enlace_hubspot = build_enlace_hubspot(company_id=company['id'])

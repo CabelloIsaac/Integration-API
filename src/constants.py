@@ -1,3 +1,13 @@
+class ProductsKeys:
+    KD_WEB: str = "KD-WEB"
+    KD_SEO: str = "KD-SEO"
+    KD_ANLT: str = "KD-ANLT"
+    KD_RRSS: str = "KD-RRSS"
+    KD_ECOM: str = "KD-ECOM"
+    KD_CRM : str = "KD-CRM"
+    KD_PROC: str = "KD-PROC"
+    
+
 class ClickUpCustomFields():
     RAZON_SOCIAL: str = "RAZÓN SOCIAL"
     EMAIL_LLAVE_CLIENTE_PASSWORD: str = "EMAIL_LLAVE_CLIENTE_PASSWORD"

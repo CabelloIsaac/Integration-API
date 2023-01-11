@@ -1,5 +1,5 @@
 from .config import Config
-from .constants import ProductsKeys
+from src.constants import ProductsKeys
 from ..constants import ClickUpCustomFields
 from .service import clickup_api_service
 

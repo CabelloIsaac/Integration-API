@@ -141,6 +141,7 @@ class HubspotService:
                 properties=[
                     "name",
                     "hubspot_owner_id",
+                    "c_s__owner",
                     "description",
                     "nif_cif",
                 ]
@@ -205,7 +206,6 @@ class HubspotService:
                 after=after
             )
             return response.to_dict()
-            # return response.
         except OwnerApiException as e:
             print("Exception when calling OwnersApi->get_page: %s\n" % e)
             return None
