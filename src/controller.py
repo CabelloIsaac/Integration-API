@@ -15,10 +15,22 @@ def sync_clients():
 
     for click_up_client in click_up_clients:
         processed_click_up_client = click_up_controller.sync_client(ClientBase(**click_up_client))
+        processed_click_up_client["hubspot_company_id"] = click_up_client["hubspot_company_id"]
         processed_click_up_clients.append(processed_click_up_client)
 
     for processed_click_up_client in processed_click_up_clients:
         if processed_click_up_client["status"] == "ok":
+            
+            # Add Client ID and Client URL to Hubspot Company
+            hubspot_company_id = processed_click_up_client["hubspot_company_id"]
+            client_id = processed_click_up_client["id"]
+            client_url = processed_click_up_client["url"]
+            properties = {
+                "clickup_client_id": client_id,
+                "clickup_client_url": client_url
+            }
+            hubspot_controller.update_company(company_id=hubspot_company_id, properties=properties)
+            
             projects = processed_click_up_client["projects"]
             for project in projects:
                 hubspot_controller.update_project(project=project)

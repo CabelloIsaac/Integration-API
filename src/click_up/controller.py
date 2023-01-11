@@ -295,6 +295,7 @@ def sync_client(request: ClientBase):
 
     return {
         "status": "ok",
+        "id": client_id,
         "nif_cif": request.nif_cif,
         "name": request.name,
         "url": client_url,

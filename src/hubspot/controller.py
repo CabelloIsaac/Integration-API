@@ -20,22 +20,22 @@ def get_quote(quote_id):
 
 
 def associate_contract_with_deal(deal_id, contract_id):
-    print (f"Associating deal {deal_id} with contract {contract_id}")
+    print (f"\nAssociating deal {deal_id} with contract {contract_id}")
     return hubspot_client.create_deal_association(deal_id=deal_id, to_object_type=Associations.CONTRACTS, to_object_id=contract_id)
 
 
 def associate_contract_with_company(company_id, contract_id):
-    print (f"Associating company {company_id} with contract {contract_id}")
+    print (f"\nAssociating company {company_id} with contract {contract_id}")
     return hubspot_client.create_company_association(company_id=company_id, to_object_type=Associations.CONTRACTS, to_object_id=contract_id)
 
 
 def associate_project_with_company(company_id, project_id):
-    print (f"Associating company {company_id} with project {project_id}")
+    print (f"\nAssociating company {company_id} with project {project_id}")
     return hubspot_client.create_company_association(company_id=company_id, to_object_type=Associations.PROJECTS, to_object_id=project_id)
 
 
 def associate_project_with_contract(contract_id, project_id):
-    print (f"Associating contract {contract_id} with project {project_id}")
+    print (f"\nAssociating contract {contract_id} with project {project_id}")
     return hubspot_client.create_custom_object_association(
         object_type=Associations.CONTRACTS,
         object_id=contract_id,
@@ -60,7 +60,7 @@ def get_deals():
 
     while not is_last_page:
         try:
-            print (f"Getting deals after {after}")
+            print (f"\nGetting deals after {after}")
             response = hubspot_client.get_deals(after=after)
             deals.extend(response["results"])
 
@@ -89,7 +89,7 @@ def get_projects():
 
     while not is_last_page:
         try:
-            print (f"Getting projects after {after}")
+            print (f"\nGetting projects after {after}")
             response = hubspot_client.get_custom_objects(
                 object_type=Config.HUBSPOT_PROJECT_OBJECT_TYPE,
                 after=after
@@ -114,7 +114,7 @@ def get_projects():
 
 
 def set_deal_as_added_to_clickup(deal_id):
-    print (f"Setting deal {deal_id} as added to ClickUp")
+    print (f"\nSetting deal {deal_id} as added to ClickUp")
     return hubspot_client.update_deal(deal_id=deal_id, properties={"estado_clickup": EstadoClickup.ANADIDO_A_CLICKUP})
 
 
@@ -218,13 +218,13 @@ def update_project(project):
         "clickup_link": project["clickup_link"],
         "clickup_project_status": project["clickup_project_status"],
     }
-    print (f"Updating project {project_id}")
+    print (f"\nUpdating project {project_id}")
     print (properties)
     return hubspot_client.update_custom_object(object_type=Config.HUBSPOT_PROJECT_OBJECT_TYPE, object_id=project_id, properties=properties)
 
 
 def set_click_up_status_in_project(click_up_status, click_up_id):
-    print (f"Setting ClickUp status {click_up_status} in project {click_up_id}")
+    print (f"\nSetting ClickUp status {click_up_status} in project {click_up_id}")
     properties = {
         "clickup_project_status": click_up_status,
     }
@@ -250,7 +250,7 @@ def assign_cs_owner_to_company(company, line_items_data: list[dict]):
 
             cs_owner_id = pick_cs_owner_based_on_line_items(line_items_data=line_items_data)
 
-            print (f"Assigning company owner: {cs_owner_id}")
+            print (f"\nAssigning company owner: {cs_owner_id}")
             properties = {"c_s__owner": cs_owner_id}
             company = hubspot_client.update_company(company_id=company_id, properties=properties)
             print (f"New company owner: {company['properties']['c_s__owner']}")
@@ -260,6 +260,10 @@ def assign_cs_owner_to_company(company, line_items_data: list[dict]):
     else:
         print ("Company not found")
         return None
+
+
+def update_company(company_id, properties):
+    return hubspot_client.update_company(company_id=company_id, properties=properties)
 
 
 def process_deals():
@@ -353,7 +357,10 @@ def process_deals():
             
             # Assign CS Owner to COMPANY based on line_items
             company = assign_cs_owner_to_company(company=company, line_items_data=line_items_data)
-            return company
+            
+            if company is None:
+                print ("Company not found. Skipping...")
+                continue
 
             # Create CONTRACT and link to COMPANY and DEAL
             contract = create_contract(contract_name=f"Contrato {deal_name}")
@@ -418,6 +425,7 @@ def build_click_up_payload(company, products, deal_id):
         "description": company['properties']['description'],
         "nif_cif": company['properties']['nif_cif'],
         "cs_owner": owner_email,
+        "hubspot_company_id": company['id'],
         "hubspot_deal_id": deal_id,
         "products": products,
         "custom_fields": [
