@@ -7,7 +7,9 @@ from .schemas import ClientBase, TaskUpdatedElement
 from .service import clickup_api_service
 from .utils import Utils
 from ..hubspot import controller as hubspot_controller
+from src.service import LoggingService
 
+loggin_service = LoggingService(module="click_up")
 
 def build_nif_cif_cliente_for_checking_if_exists(nif_cif_cliente_field_id: str, nif_cif_cliente:str):
     """
@@ -92,7 +94,7 @@ def create_client(client_name, cs_owner, custom_fields, client_custom_fields, ni
     Returns:
         dict: The client if exists, None otherwise
     """
-    print (f"Creating client {client_name}")
+    loggin_service.info(f"Creating client {client_name}")
 
     # Build client name
     client_full_name = Utils.build_client_name(cifNif=nif_cif_cliente, name=client_name)
@@ -125,7 +127,7 @@ def create_client(client_name, cs_owner, custom_fields, client_custom_fields, ni
 
     # The task could not be created
     if "id" not in client:
-        print (f"Error creating client {client_name}")
+        loggin_service.error(f"Error creating client {client_name}")
         return {
             "status": "error",
             "error": "Error creating client",
@@ -137,7 +139,7 @@ def create_client(client_name, cs_owner, custom_fields, client_custom_fields, ni
     client_id = client["id"]
     client_url = client["task"]["url"]
 
-    print (f"Client {client_name} ({client_id}) created at {client_url}")
+    loggin_service.info (f"Client {client_name} ({client_id}) created at {client_url}")
 
     # Apply assignees to client
     client = clickup_api_service.update_task(task_id=client_id, data={
@@ -176,7 +178,7 @@ def sync_client(request: ClientBase):
 
     if client_exists:
         # if exists, take the current it to add projects
-        print (f"Client already exists at {client_exists['url']}")
+        loggin_service.info (f"Client already exists at {client_exists['url']}")
         client = client_exists
     else:
         client = create_client(
@@ -206,7 +208,7 @@ def sync_client(request: ClientBase):
         template_id = Utils.get_template_id_for_product_by_sku(sku=sku)
 
         if template_id is None:
-            print (f"Error creating product {product_name}: template not found")
+            loggin_service.error(f"Error creating product {product_name}: template not found")
             return {
                 "status": "error",
                 "error": "Error creating product",
@@ -215,10 +217,10 @@ def sync_client(request: ClientBase):
                 "error_message": f"Error creating product {product_name}: template not found"
             }
 
-        print (f"Creating product {product_name} in list {list_id} with template {template_id}")
+        loggin_service.info(f"Creating product {product_name} in list {list_id} with template {template_id}")
 
         if list_id is None:
-            print (f"Error creating product {product_name}: list not found")
+            loggin_service.error(f"Error creating product {product_name}: list not found")
             return {
                 "status": "error",
                 "error": "Error creating product",
@@ -257,7 +259,7 @@ def sync_client(request: ClientBase):
         )
 
         if "id" not in new_product:
-            print (f"Error creating product {product_name}")
+            loggin_service.error(f"Error creating product {product_name}")
             return {
                 "status": "error",
                 "error": "Error creating product",
@@ -269,10 +271,10 @@ def sync_client(request: ClientBase):
         new_product_id = new_product["id"]
         new_product_url = new_product["task"]["url"]
 
-        print (f"Product {product_name} ({new_product_id}) created at {new_product_url}")
+        loggin_service.info(f"Product {product_name} ({new_product_id}) created at {new_product_url}")
         
         # Apply assignees to product
-        print (f"Assigning {cs_owner} as owner of product {product_name}")
+        loggin_service.info(f"Assigning {cs_owner} as owner of product {product_name}")
         new_product = clickup_api_service.update_task(task_id=new_product_id, data={
             "assignees": {
                 "add": [cs_owner_id]
@@ -316,15 +318,15 @@ def create_webhook():
 
     for wh in webhooks:
         if wh["endpoint"] == webhook_endpoint:
-            print (f"Webhook already exists at {webhook_endpoint}")
+            loggin_service.info(f"Webhook already exists at {webhook_endpoint}")
             if delete_webooks:
-                print (f"Deleting webhook {wh['id']}")
+                loggin_service.info(f"Deleting webhook {wh['id']}")
                 clickup_api_service.delete_webhook(wh["id"])
             webhook_exists = True
 
     # If webhook doesn't exist, create it
     if not webhook_exists:
-        print (f"Creating webhook at {webhook_endpoint}")
+        loggin_service.info(f"Creating webhook at {webhook_endpoint}")
         webhook = {
             "endpoint": webhook_endpoint,
             "events": [
@@ -335,16 +337,14 @@ def create_webhook():
         }
         webhook = clickup_api_service.create_webhook(Config.TEAM_ID, webhook)
         if "id" not in webhook:
-            print ("Error creating webhook")
-            print (webhook)
+            loggin_service.error(f"Error creating webhook: {webhook}")
             return
         else:
-            print ("Webhook created")
-            print (webhook)
+            loggin_service.info(f"Webhook created: {webhook}")
 
 
 def apply_its_lowest_status_to_client(request: TaskUpdatedElement):
-    print (f"Applying its lowest status to client {request.task_id}")
+    loggin_service.info(f"Applying its lowest status to client {request.task_id}")
     client = clickup_api_service.get_task(
         task_id=request.task_id,
         include_subtasks=True,
@@ -362,16 +362,16 @@ def apply_its_lowest_status_to_client(request: TaskUpdatedElement):
     )
 
     if client_current_status is None:
-        print (f"Client { request.task_id } has no status")
+        loggin_service.error(f"Client { request.task_id } has no status")
         return "Client status not found"
     elif client_current_status == "":
         client_current_status = 0
     
-    print (f"Client current status: {client_current_status}")
+    loggin_service.info(f"Client current status: {client_current_status}")
     
     linked_tasks = client["linked_tasks"]
     
-    print (f"Linked tasks found: {len(linked_tasks)}")
+    loggin_service.info(f"Linked tasks found: {len(linked_tasks)}")
     
     if len(linked_tasks) == 0:
         return "No linked tasks found"
@@ -383,15 +383,15 @@ def apply_its_lowest_status_to_client(request: TaskUpdatedElement):
         linked_task_data = clickup_api_service.get_task(task_id=linked_task_id)
         linked_task_status = Utils.get_custom_field_value_by_name(linked_task_data["custom_fields"], ClickUpCustomFields.ESTADO_PROYECTO)
         project_statuses.append(linked_task_status)
-        print (f"Linked task {linked_task_id} status: {linked_task_status}")
+        loggin_service.info(f"Linked task {linked_task_id} status: {linked_task_status}")
         
     lowest_status = min(project_statuses)
     
     if lowest_status == client_current_status:
-        print (f"Client status is already {lowest_status}")
+        loggin_service.info(f"Client status is already {lowest_status}")
         return "Client status is already lowest"
     else:
-        print (f"Client status is {client_current_status}, changing to {lowest_status}")
+        loggin_service.info(f"Client status is {client_current_status}, changing to {lowest_status}")
         clickup_custom_fields = clickup_api_service.get_list_custom_fields(Config.CLIENTES_LIST_ID)["fields"]
         estado_client_field_id = Utils.get_custom_field_id_by_name(clickup_custom_fields, ClickUpCustomFields.ESTADO_CLIENTE)
         client = clickup_api_service.set_custom_field_to_task(
@@ -407,7 +407,7 @@ def sync_task(request: TaskUpdatedElement):
 
     start_time = time()
 
-    print (f"Syncing task {request.task_id}")
+    loggin_service.info(f"Syncing task {request.task_id}")
     updated_task_id = request.task_id
     updated_task = clickup_api_service.get_task(
         updated_task_id,
@@ -428,8 +428,8 @@ def sync_task(request: TaskUpdatedElement):
 
     subtasks_length = len(updated_task["subtasks"])
 
-    print (f"Task name: '{updated_task['name']}'")
-    print (f"Subtasks: {subtasks_length}")
+    loggin_service.info(f"Task name: '{updated_task['name']}'")
+    loggin_service.info(f"Subtasks: {subtasks_length}")
 
     if subtasks_length == 0:
         return "No subtasks found. Nothing to do."
@@ -456,7 +456,7 @@ def sync_task(request: TaskUpdatedElement):
     }
 
     end_time = time()
-    print (f"Syncing task {request.task_id} took {end_time - start_time} seconds")
+    loggin_service.info(f"Syncing task {request.task_id} took {end_time - start_time} seconds")
 
     return response
 
@@ -473,7 +473,7 @@ def update_custom_fields_in_subtask(parent_custom_fields: list[dict], subtask: d
             field_value = Utils.get_custom_field_value_by_name(parent_custom_fields, field_name)    
             fields_to_update[field_name] = field_value
 
-    print (f"\nUpdating fields in task '{subtask['name']}':")
+    loggin_service.info(f"\nUpdating fields in task '{subtask['name']}':")
     for field_to_update in fields_to_update:
         field_id = Utils.get_custom_field_id_by_name(parent_custom_fields, field_to_update)
         field_name = field_to_update
@@ -483,7 +483,7 @@ def update_custom_fields_in_subtask(parent_custom_fields: list[dict], subtask: d
         if field_id != "" and field_value != "":
             clickup_api_service.set_custom_field_to_task(subtask["id"], field_id, field_value, type=field_type)
 
-    print (f"Finished updating fields in task '{subtask['name']}' in {time() - start_time} seconds")
+    loggin_service.info(f"Finished updating fields in task '{subtask['name']}' in {time() - start_time} seconds")
 
 
 def sync_all_tasks():
@@ -500,8 +500,8 @@ def sync_all_tasks():
 
     # Get tasks from each list
     for list in lists:
-        print ("\n############################################")
-        print (f"Getting tasks from list '{list['name']}'")
+        loggin_service.info("\n############################################")
+        loggin_service.info(f"Getting tasks from list '{list['name']}'")
         list_id = list["id"]
         tasks = []
         current_page = 0
@@ -512,7 +512,7 @@ def sync_all_tasks():
             tasks_response = clickup_api_service.get_tasks(list_id, subtasks=True, page=current_page)
 
             if "tasks" not in tasks_response:
-                print ("Error getting tasks")
+                loggin_service.info("Error getting tasks")
                 return tasks_response
 
             current_page += 1
@@ -520,25 +520,25 @@ def sync_all_tasks():
             tasks += tasks_response["tasks"]
             is_last_page = tasks_response["tasks"] == []
 
-        print (f"Tasks found: {len(tasks)}")
+        loggin_service.info(f"Tasks found: {len(tasks)}")
 
         parent_task = None
 
         for task in tasks:
             parent = task["parent"]
             if parent != "None" and parent is not None:
-                print ("\n--------------------------------------------")
-                print (f"Fixing task '{task['name']}' - {task['id']}")
+                loggin_service.info("\n--------------------------------------------")
+                loggin_service.info(f"Fixing task '{task['name']}' - {task['id']}")
 
                 # Check if parent task is not the same as the last one
                 if parent_task is None or parent_task["id"] != parent:
-                    print (f"\nGetting parent task with id: '{parent}'")
+                    loggin_service.info(f"\nGetting parent task with id: '{parent}'")
                     parent_task = clickup_api_service.get_task(parent)
 
                 # Get parent task custom fields
                 parent_custom_fields = parent_task["custom_fields"]
 
-                print (f"Parent task '{parent_task['name']}'")
+                loggin_service.info(f"Parent task '{parent_task['name']}'")
 
                 update_custom_fields_in_subtask(parent_custom_fields=parent_custom_fields, subtask=task)
                 tasks_processed += 1
@@ -546,11 +546,11 @@ def sync_all_tasks():
                 if ONLY_EXECUTE_ONCE:
                     return "Done"
 
-        print ("Waiting 5 seconds before getting next list...")
+        loggin_service.info("Waiting 5 seconds before getting next list...")
         sleep(5)
 
     end_time = time()
-    print (f"Syncing {tasks_processed} tasks took {end_time - start_time} seconds")
+    loggin_service.info(f"Syncing {tasks_processed} tasks took {end_time - start_time} seconds")
 
     return "Done"
     

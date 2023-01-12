@@ -12,7 +12,7 @@ def sync_clients():
     """
     click_up_clients = hubspot_controller.process_deals()
     processed_click_up_clients = []
-
+    
     for click_up_client in click_up_clients:
         processed_click_up_client = click_up_controller.sync_client(ClientBase(**click_up_client))
         processed_click_up_client["hubspot_company_id"] = click_up_client["hubspot_company_id"]
