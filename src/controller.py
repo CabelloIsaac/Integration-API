@@ -1,7 +1,7 @@
 from .click_up import controller as click_up_controller
 from .click_up.schemas import ClientBase
 from .hubspot import controller as hubspot_controller
-
+import logging
 
 def sync_clients():
     """

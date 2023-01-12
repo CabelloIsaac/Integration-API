@@ -205,17 +205,23 @@ class Utils:
             str: The custom field value.
         """
         custom_field_value = ""
+        found = False
         for field in custom_fields:
             if field["name"] == name:
+                found = True
                 if "value" in field:
                     custom_field_value = field["value"]
                 break
+            
+        if not found:
+            return None
 
         if get_option_name:
             if "type" in field:
                 if field["type"] == "drop_down":
                     custom_field_value = field["type_config"]["options"][int(custom_field_value)]["name"]
 
+        
         return custom_field_value
 
 

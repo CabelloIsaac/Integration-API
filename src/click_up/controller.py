@@ -343,6 +343,65 @@ def create_webhook():
             print (webhook)
 
 
+def apply_its_lowest_status_to_client(request: TaskUpdatedElement):
+    print (f"Applying its lowest status to client {request.task_id}")
+    client = clickup_api_service.get_task(
+        task_id=request.task_id,
+        include_subtasks=True,
+        custom_task_ids=request.custom_task_ids,
+    )
+    
+    if "id" not in client:
+        return "Client not found"
+    
+    task_id = client["id"]
+
+    client_current_status = Utils.get_custom_field_value_by_name(
+        client["custom_fields"],
+        ClickUpCustomFields.ESTADO_CLIENTE,
+    )
+
+    if client_current_status is None:
+        print (f"Client { request.task_id } has no status")
+        return "Client status not found"
+    elif client_current_status == "":
+        client_current_status = 0
+    
+    print (f"Client current status: {client_current_status}")
+    
+    linked_tasks = client["linked_tasks"]
+    
+    print (f"Linked tasks found: {len(linked_tasks)}")
+    
+    if len(linked_tasks) == 0:
+        return "No linked tasks found"
+    
+    project_statuses = []
+    
+    for linked_task in linked_tasks:
+        linked_task_id = linked_task["link_id"]
+        linked_task_data = clickup_api_service.get_task(task_id=linked_task_id)
+        linked_task_status = Utils.get_custom_field_value_by_name(linked_task_data["custom_fields"], ClickUpCustomFields.ESTADO_PROYECTO)
+        project_statuses.append(linked_task_status)
+        print (f"Linked task {linked_task_id} status: {linked_task_status}")
+        
+    lowest_status = min(project_statuses)
+    
+    if lowest_status == client_current_status:
+        print (f"Client status is already {lowest_status}")
+        return "Client status is already lowest"
+    else:
+        print (f"Client status is {client_current_status}, changing to {lowest_status}")
+        clickup_custom_fields = clickup_api_service.get_list_custom_fields(Config.CLIENTES_LIST_ID)["fields"]
+        estado_client_field_id = Utils.get_custom_field_id_by_name(clickup_custom_fields, ClickUpCustomFields.ESTADO_CLIENTE)
+        client = clickup_api_service.set_custom_field_to_task(
+            task_id=task_id,
+            field_id=estado_client_field_id,
+            value=lowest_status,
+        )
+        return f"Client status changed from {client_current_status} to {lowest_status}"
+    
+
 def sync_task(request: TaskUpdatedElement):
     """Syncs a task with its subtasks"""
 

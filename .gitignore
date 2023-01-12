@@ -7,3 +7,6 @@ idea/*
 
 # PyCache
 __pycache__/
+
+# Logs
+*.log
