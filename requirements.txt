@@ -6,3 +6,4 @@ pydantic==1.10.2
 hubspot-api-client==7.2.1
 SQLAlchemy==1.4.46
 psycopg2-binary==2.9.5
+slack_sdk==3.19.5

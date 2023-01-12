@@ -7,7 +7,7 @@ from src.db.models import APICall
 
 class APICallService:
 
-    def create_record(db: Session, request_url, request_body):
+    def create_record(db: Session, request_url, request_body = None):
         """
         Create a new APICall in database
         
