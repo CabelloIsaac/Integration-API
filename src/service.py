@@ -43,8 +43,11 @@ class APICallService:
         Set the execution result of an APICall
         """
         has_error = False
-        if "status" in result:
-            has_error = result["status"] == "error"
+        try:
+            if "status" in result:
+                has_error = result["status"] == "error"
+        except:
+            has_error = False
                 
         apicall_data: APICall = db.query(APICall).filter(APICall.id == id).first()
         result = str(result)
@@ -57,6 +60,9 @@ class APICallService:
         logging.info(f"{'########################'+closing_brackets}\n")
         
         if has_error:
+            timestamp = datetime.now()
+            # ISO 8601
+            timestamp = timestamp.strftime("%Y-%m-%dT%H:%M:%S")
             apicall_id = f"apicall_id: {apicall_data.id}"
             apicall_endpoint = f"endpoint: {apicall_data.endpoint}"
             apicall_request_body = f"request_body: {apicall_data.request_body}"
@@ -64,62 +70,7 @@ class APICallService:
 
             message_body = f"{apicall_id}\n{apicall_endpoint}\n{apicall_request_body}\n{apicall_result}"
             
-            slack_controller.send_alert(message=f"❌ ERROR DETECTED at {datetime.now()}:\n{message_body}")
+            slack_controller.send_alert(message=f"❌ ERROR DETECTED at {timestamp}:\n{message_body}")
         
         db.commit()
-        
     
-class LoggingService:
-    
-    def __init__(self, module: str):
-        self.module: str = module
-    
-    def info(self, message: str, to_file: bool = True):
-        """
-        Log an info message to console and/or file
-        
-        Args:
-            message (str): Message to log
-            to_file (bool): Log to file if True
-        """
-        
-        # Log to console
-        print (f"{self.module} - INFO: {message}")
-        
-        # Log to file
-        if to_file:
-            logging.info(f"{self.module}: {message}")
-            
-            
-    def error(self, message: str, to_file: bool = True):
-        """
-        Log an error message to console and/or file
-        
-        Args:
-            message (str): Message to log
-            to_file (bool): Log to file if True
-        """
-        
-        # Log to console
-        print (f"{self.module.upper()} - ERROR: {message}")
-        
-        # Log to file
-        if to_file:
-            logging.error(f"{self.module}: {message}")
-            
-            
-    def debug(self, message: str, to_file: bool = True):
-        """
-        Log an debug message to console and/or file
-        
-        Args:
-            message (str): Message to log
-            to_file (bool): Log to file if True
-        """
-        
-        # Log to console
-        print (f"{self.module.upper()} - DEBUG: {message}")
-        
-        # Log to file
-        if to_file:
-            logging.debug(f"{self.module}: {message}")

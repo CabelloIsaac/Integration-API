@@ -7,3 +7,7 @@ def test_connection(send_alert: bool = False):
 
 def send_alert(message: str):
     return slack_client.send_alert(message)
+
+
+def send_error_alert(message: str):
+    return slack_client.send_error_alert(message)

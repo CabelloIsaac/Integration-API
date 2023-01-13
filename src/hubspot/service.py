@@ -16,6 +16,9 @@ from hubspot.crm.quotes import ApiException as QuoteApiException
 from .config import Config
 from .constants import Associations
 
+from src.logging.service import LoggingService
+
+logging_service = LoggingService(module="hubspot")
 
 class HubspotService:
 
@@ -50,7 +53,7 @@ class HubspotService:
             )
             return api_response.to_dict()
         except DealApiException as e:
-            print("Exception when calling basic_api->get_page: %s\n" % e)
+            logging_service.error("Exception when calling basic_api->get_page: %s\n" % e)
 
 
     def update_deal(self, deal_id, properties):
@@ -64,7 +67,7 @@ class HubspotService:
             )
             return api_response.to_dict()
         except DealApiException as e:
-            print("Exception when calling basic_api->update: %s\n" % e)
+            logging_service.error("Exception when calling basic_api->update: %s\n" % e)
 
 
     def get_deal_associations(self, deal_id, to_object_type:str, limit=100):
@@ -76,7 +79,7 @@ class HubspotService:
             )
             return response.to_dict()
         except DealApiException as e:
-            print("Exception when calling AssociationsApi->get_all: %s\n" % e)
+            logging_service.error("Exception when calling AssociationsApi->get_all: %s\n" % e)
   
 
     def create_deal_association(self, deal_id, to_object_type:str, to_object_id:str):
@@ -86,7 +89,7 @@ class HubspotService:
         )
 
         if len(association_spec) == 0:
-            print (f"No se ha encontrado el tipo de asociación entre 'Deals' y '{to_object_type}'")
+            logging_service.error (f"No se ha encontrado el tipo de asociación entre 'Deals' y '{to_object_type}'")
             return None
 
         association_spec_formatted = []
@@ -106,7 +109,7 @@ class HubspotService:
             )
             return response.to_dict()
         except DealApiException as e:
-            print("Exception when calling AssociationsApi->create: %s\n" % e)
+            logging_service.error("Exception when calling AssociationsApi->create: %s\n" % e)
             return None
 
 
@@ -117,7 +120,7 @@ class HubspotService:
         )
 
         if len(association_spec) == 0:
-            print (f"No se ha encontrado el tipo de asociación entre '{object_type}' y '{to_object_type}'")
+            logging_service.error (f"No se ha encontrado el tipo de asociación entre '{object_type}' y '{to_object_type}'")
             return None
 
         try:
@@ -130,7 +133,7 @@ class HubspotService:
             )
             return api_response.to_dict()    
         except ObjectApiException as e:
-            print("Exception when calling associations_api->create: %s\n" % e)
+            logging_service.error("Exception when calling associations_api->create: %s\n" % e)
             return None
 
 
@@ -148,7 +151,7 @@ class HubspotService:
             )
             return response.to_dict()
         except CompanyApiException as e:
-            print("Exception when calling basic_api->get_by_id: %s\n" % e)
+            logging_service.error("Exception when calling basic_api->get_by_id: %s\n" % e)
             return None
 
 
@@ -159,7 +162,7 @@ class HubspotService:
         )
 
         if len(association_spec) == 0:
-            print (f"No se ha encontrado el tipo de asociación entre 'Companies' y '{to_object_type}'")
+            logging_service.error (f"No se ha encontrado el tipo de asociación entre 'Companies' y '{to_object_type}'")
             return None
 
         association_spec_formatted = []
@@ -179,7 +182,7 @@ class HubspotService:
             )
             return response.to_dict()
         except CompanyApiException as e:
-            print("Exception when calling AssociationsApi->create: %s\n" % e)
+            logging_service.error("Exception when calling AssociationsApi->create: %s\n" % e)
             return None
 
 
@@ -194,7 +197,7 @@ class HubspotService:
             )
             return response.to_dict()
         except CompanyApiException as e:
-            print("Exception when calling basic_api->update: %s\n" % e)
+            logging_service.error("Exception when calling basic_api->update: %s\n" % e)
             return None
 
     
@@ -207,7 +210,7 @@ class HubspotService:
             )
             return response.to_dict()
         except OwnerApiException as e:
-            print("Exception when calling OwnersApi->get_page: %s\n" % e)
+            logging_service.error("Exception when calling OwnersApi->get_page: %s\n" % e)
             return None
 
 
@@ -218,7 +221,7 @@ class HubspotService:
             )
             return response.to_dict()
         except OwnerApiException as e:
-            print("Exception when calling OwnersApi->get_by_id: %s\n" % e)
+            logging_service.error("Exception when calling OwnersApi->get_by_id: %s\n" % e)
             return None
 
 
@@ -229,7 +232,7 @@ class HubspotService:
             )
             return response.to_dict()
         except QuoteApiException as e:
-            print("Exception when calling basic_api->get_by_id: %s\n" % e)
+            logging_service.error("Exception when calling basic_api->get_by_id: %s\n" % e)
             return None
 
 
@@ -242,7 +245,7 @@ class HubspotService:
             )
             return response.to_dict()
         except QuoteApiException as e:
-            print("Exception when calling AssociationsApi->get_all: %s\n" % e)
+            logging_service.error("Exception when calling AssociationsApi->get_all: %s\n" % e)
             return None
 
 
@@ -257,7 +260,7 @@ class HubspotService:
             )
             return response.to_dict()
         except LineItemApiException as e:
-            print("Exception when calling basic_api->get_by_id: %s\n" % e)
+            logging_service.error("Exception when calling basic_api->get_by_id: %s\n" % e)
             return None
 
 
@@ -271,7 +274,7 @@ class HubspotService:
             )
             return response.to_dict()
         except ObjectApiException as e:
-            print("Exception when calling basic_api->create: %s\n" % e)
+            logging_service.error("Exception when calling basic_api->create: %s\n" % e)
             return None
 
 
@@ -284,7 +287,7 @@ class HubspotService:
             )
             return response.to_dict()
         except ObjectApiException as e:
-            print("Exception when calling basic_api->get_page: %s\n" % e)
+            logging_service.error("Exception when calling basic_api->get_page: %s\n" % e)
             return None
 
 
@@ -299,7 +302,7 @@ class HubspotService:
             )
             return response.to_dict()
         except ObjectApiException as e:
-            print("Exception when calling basic_api->update: %s\n" % e)
+            logging_service.error("Exception when calling basic_api->update: %s\n" % e)
             return None
 
 

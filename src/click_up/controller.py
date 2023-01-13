@@ -7,7 +7,7 @@ from .schemas import ClientBase, TaskUpdatedElement
 from .service import clickup_api_service
 from .utils import Utils
 from ..hubspot import controller as hubspot_controller
-from src.service import LoggingService
+from src.logging.service import LoggingService
 
 loggin_service = LoggingService(module="click_up")
 
@@ -166,7 +166,14 @@ def sync_client(request: ClientBase):
         request (ClientBase): The request object
     """
 
-    custom_fields = clickup_api_service.get_list_custom_fields(Config.CLIENTES_LIST_ID)["fields"]
+    custom_fields = clickup_api_service.get_list_custom_fields(Config.CLIENTES_LIST_ID)
+    if custom_fields is None:
+        return {
+            "status": "error",
+            "message": "Error getting custom fields from ClickUp"
+        }
+        
+    custom_fields = custom_fields["fields"]
     product_lists = clickup_api_service.get_lists_from_folder(Config.PRODUCTOS_FOLDER_ID)["lists"]
 
     client_exists = check_client_exists(custom_fields, request.nif_cif)
@@ -232,7 +239,7 @@ def sync_client(request: ClientBase):
         product_custom_fields = [
             {
                 "name": ClickUpCustomFields.ESTADO_PROYECTO,
-                "value": "DOCUMENTACIÓN"
+                "value": "INBOX"
             },
             {
                 "name": ClickUpCustomFields.PRODUCTO,
@@ -347,12 +354,14 @@ def apply_its_lowest_status_to_client(request: TaskUpdatedElement):
     loggin_service.info(f"Applying its lowest status to client {request.task_id}")
     client = clickup_api_service.get_task(
         task_id=request.task_id,
-        include_subtasks=True,
         custom_task_ids=request.custom_task_ids,
     )
     
     if "id" not in client:
-        return "Client not found"
+        return {
+            "status": "error",
+            "message": f"Client not found: {client}"
+        }
     
     task_id = client["id"]
 
@@ -392,7 +401,16 @@ def apply_its_lowest_status_to_client(request: TaskUpdatedElement):
         return "Client status is already lowest"
     else:
         loggin_service.info(f"Client status is {client_current_status}, changing to {lowest_status}")
-        clickup_custom_fields = clickup_api_service.get_list_custom_fields(Config.CLIENTES_LIST_ID)["fields"]
+        
+        clickup_custom_fields = clickup_api_service.get_list_custom_fields(Config.CLIENTES_LIST_ID)
+        if clickup_custom_fields is None:
+            return {
+                "status": "error",
+                "message": "Error getting custom fields from ClickUp"
+            }
+        
+        clickup_custom_fields = clickup_custom_fields["fields"]
+        
         estado_client_field_id = Utils.get_custom_field_id_by_name(clickup_custom_fields, ClickUpCustomFields.ESTADO_CLIENTE)
         client = clickup_api_service.set_custom_field_to_task(
             task_id=task_id,
@@ -416,7 +434,10 @@ def sync_task(request: TaskUpdatedElement):
     )
 
     if "id" not in updated_task:
-        return "Task not found"
+        return {
+            "status": "error",
+            "message": "Task not found"
+        }
 
     # Send task status to Hubspot
     updated_task_original_id = updated_task["id"]
@@ -424,7 +445,10 @@ def sync_task(request: TaskUpdatedElement):
     hubspot_controller.set_click_up_status_in_project(click_up_status=status, click_up_id=updated_task_original_id)
 
     if "subtasks" not in updated_task:
-        return "No subtasks found. Nothing to do."
+        return {
+            "status": "ok",
+            "message": "No subtasks found. Nothing to do."
+        }
 
     subtasks_length = len(updated_task["subtasks"])
 
@@ -432,7 +456,10 @@ def sync_task(request: TaskUpdatedElement):
     loggin_service.info(f"Subtasks: {subtasks_length}")
 
     if subtasks_length == 0:
-        return "No subtasks found. Nothing to do."
+        return {
+            "status": "ok",
+            "message": "No subtasks found. Nothing to do."
+        }
 
     updated_task_custom_fields = updated_task["custom_fields"]
     updated_subtasks = []

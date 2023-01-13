@@ -1,3 +1,4 @@
+from datetime import datetime
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
@@ -40,6 +41,12 @@ class SlackService:
                     "status": "error",
                     "message": e.response["error"]
                 }
+
+
+    def send_error_alert(self, message: str):
+        timestamp = datetime.now()
+        timestamp = timestamp.strftime("%Y-%m-%dT%H:%M:%S")
+        self.send_alert(message=f"❌ ERROR DETECTED at {timestamp}:\n{message}")
 
 
 slack_client = SlackService(Config.SLACK_BOT_TOKEN)

@@ -1,11 +1,15 @@
 import random
 
-from .utils import Utils
-from .service import hubspot_client
-from .constants import EstadoClickup, Associations
-from .config import Config
-from ..constants import ClickUpCustomFields
+from src.logging.service import LoggingService
 
+from ..constants import ClickUpCustomFields
+from .config import Config
+from .constants import Associations, EstadoClickup
+from .service import hubspot_client
+from .utils import Utils
+from src.controller import log_error
+
+loggin_service = LoggingService(module="hubspot")
 
 def get_deal_companies(deal_id):
     return hubspot_client.get_deal_associations(deal_id=deal_id, to_object_type=Associations.COMPANIES)["results"]
@@ -20,22 +24,22 @@ def get_quote(quote_id):
 
 
 def associate_contract_with_deal(deal_id, contract_id):
-    print (f"\nAssociating deal {deal_id} with contract {contract_id}")
+    loggin_service.info (f"\nAssociating deal {deal_id} with contract {contract_id}")
     return hubspot_client.create_deal_association(deal_id=deal_id, to_object_type=Associations.CONTRACTS, to_object_id=contract_id)
 
 
 def associate_contract_with_company(company_id, contract_id):
-    print (f"\nAssociating company {company_id} with contract {contract_id}")
+    loggin_service.info (f"\nAssociating company {company_id} with contract {contract_id}")
     return hubspot_client.create_company_association(company_id=company_id, to_object_type=Associations.CONTRACTS, to_object_id=contract_id)
 
 
 def associate_project_with_company(company_id, project_id):
-    print (f"\nAssociating company {company_id} with project {project_id}")
+    loggin_service.info (f"\nAssociating company {company_id} with project {project_id}")
     return hubspot_client.create_company_association(company_id=company_id, to_object_type=Associations.PROJECTS, to_object_id=project_id)
 
 
 def associate_project_with_contract(contract_id, project_id):
-    print (f"\nAssociating contract {contract_id} with project {project_id}")
+    loggin_service.info (f"\nAssociating contract {contract_id} with project {project_id}")
     return hubspot_client.create_custom_object_association(
         object_type=Associations.CONTRACTS,
         object_id=contract_id,
@@ -60,20 +64,18 @@ def get_deals():
 
     while not is_last_page:
         try:
-            print (f"\nGetting deals after {after}")
+            loggin_service.info (f"\nGetting deals after {after}")
             response = hubspot_client.get_deals(after=after)
             deals.extend(response["results"])
 
             if response["paging"] is not None:
                 after = response["paging"]["next"]["after"]
-                print (after)
             else:
-                print ("No more deals")
                 is_last_page = True
                 after = None
 
         except KeyError:
-            print ("No more deals")
+            loggin_service.info ("No more deals")
             after = None
             is_last_page = True
             break
@@ -89,7 +91,7 @@ def get_projects():
 
     while not is_last_page:
         try:
-            print (f"\nGetting projects after {after}")
+            loggin_service.info (f"\nGetting projects after {after}")
             response = hubspot_client.get_custom_objects(
                 object_type=Config.HUBSPOT_PROJECT_OBJECT_TYPE,
                 after=after
@@ -98,14 +100,12 @@ def get_projects():
 
             if response["paging"] is not None:
                 after = response["paging"]["next"]["after"]
-                print (after)
             else:
-                print ("No more projects")
                 is_last_page = True
                 after = None
 
         except KeyError:
-            print ("No more projects")
+            loggin_service.info ("No more projects")
             after = None
             is_last_page = True
             break
@@ -114,7 +114,7 @@ def get_projects():
 
 
 def set_deal_as_added_to_clickup(deal_id):
-    print (f"\nSetting deal {deal_id} as added to ClickUp")
+    loggin_service.info (f"\nSetting deal {deal_id} as added to ClickUp")
     return hubspot_client.update_deal(deal_id=deal_id, properties={"estado_clickup": EstadoClickup.ANADIDO_A_CLICKUP})
 
 
@@ -135,20 +135,17 @@ def get_owner_by_id(owner_id):
 
 def pick_cs_owner_based_on_line_items(line_items_data: list):
     
-    print ("\nPicking CS owner based on line items")
+    loggin_service.info ("\nPicking CS owner based on line items")
     
     line_item_skus = [line_item["sku"] for line_item in line_items_data]
-    # line_item_skus.append("KD-RRSS")
-    # line_item_skus.append("KD-WEB")
-    # line_item_skus.append("KD-ECOM")
     
-    print (f"Line item SKUs: {line_item_skus}")
+    loggin_service.info (f"Line item SKUs: {line_item_skus}")
     
     cs_owners_data = Config.CS_OWNERS_DATA
     
     if len(line_item_skus) == 1:
         # Se asigna al CS owner especialista en el producto
-        print (f"Assigning to CS owner expert in product {line_item_skus[0]}")
+        loggin_service.info (f"Assigning to CS owner expert in product {line_item_skus[0]}")
         
         for cs_owner_data in cs_owners_data:
             if line_item_skus[0] in cs_owner_data["products"]:
@@ -157,14 +154,14 @@ def pick_cs_owner_based_on_line_items(line_items_data: list):
     
     elif len(line_item_skus) % 2 == 0:
         # Se asigna a un CS owner de forma aleatoria
-        print ("Assigning to random CS owner")
+        loggin_service.info ("Assigning to random CS owner")
         
         random_cs_owner_data = random.choice(cs_owners_data)
         cs_owner_email = random_cs_owner_data["email"]
     
     elif len(line_item_skus) % 2 != 0:
         # Se asigna al CS Owner con más especialidades
-        print ("Assigning to CS owner with more specialities")
+        loggin_service.info ("Assigning to CS owner with more specialities")
         
         counters = {}
         for line_item_sku in line_item_skus:
@@ -175,7 +172,7 @@ def pick_cs_owner_based_on_line_items(line_items_data: list):
                     else:
                         counters[cs_owner_data["email"]] = 1
     
-        print (f"Counters: {counters}")
+        loggin_service.info (f"Counters: {counters}")
         
         # Se obtiene el CS Owner con más especialidades
         for counter in counters:
@@ -186,12 +183,12 @@ def pick_cs_owner_based_on_line_items(line_items_data: list):
     cs_owner = get_owner_by_email(cs_owner_email)
     
     if cs_owner is None:
-        print (f"CS Owner {cs_owner_email} not found")
+        loggin_service.info (f"CS Owner {cs_owner_email} not found")
         return None
     
     cs_owner_id = cs_owner["id"]
 
-    print (f"Got {cs_owner_email} ({cs_owner_id})")
+    loggin_service.info (f"Got {cs_owner_email} ({cs_owner_id})")
     return cs_owner_id
 
 
@@ -218,13 +215,13 @@ def update_project(project):
         "clickup_link": project["clickup_link"],
         "clickup_project_status": project["clickup_project_status"],
     }
-    print (f"\nUpdating project {project_id}")
-    print (properties)
+    loggin_service.info (f"\nUpdating project {project_id}")
+    loggin_service.info (properties)
     return hubspot_client.update_custom_object(object_type=Config.HUBSPOT_PROJECT_OBJECT_TYPE, object_id=project_id, properties=properties)
 
 
 def set_click_up_status_in_project(click_up_status, click_up_id):
-    print (f"\nSetting ClickUp status {click_up_status} in project {click_up_id}")
+    loggin_service.info (f"\nSetting ClickUp status {click_up_status} in project {click_up_id}")
     properties = {
         "clickup_project_status": click_up_status,
     }
@@ -233,7 +230,7 @@ def set_click_up_status_in_project(click_up_status, click_up_id):
     for project in projects:
         if project["properties"]["clickup_id"] == click_up_id:
             project_id = project["id"]
-            print (f"Updating project {project_id}")
+            loggin_service.info (f"Updating project {project_id}")
             hubspot_client.update_custom_object(object_type=Config.HUBSPOT_PROJECT_OBJECT_TYPE, object_id=project_id, properties=properties)
 
 
@@ -250,15 +247,15 @@ def assign_cs_owner_to_company(company, line_items_data: list[dict]):
 
             cs_owner_id = pick_cs_owner_based_on_line_items(line_items_data=line_items_data)
 
-            print (f"\nAssigning company owner: {cs_owner_id}")
+            loggin_service.info (f"\nAssigning company owner: {cs_owner_id}")
             properties = {"c_s__owner": cs_owner_id}
             company = hubspot_client.update_company(company_id=company_id, properties=properties)
-            print (f"New company owner: {company['properties']['c_s__owner']}")
+            loggin_service.info (f"New company owner: {company['properties']['c_s__owner']}")
         else:
-            print (f"Company {company['properties']['name']} already has an owner: {current_company_owner_id}")
+            loggin_service.info (f"Company {company['properties']['name']} already has an owner: {current_company_owner_id}")
         return company
     else:
-        print ("Company not found")
+        loggin_service.info ("Company not found")
         return None
 
 
@@ -268,149 +265,156 @@ def update_company(company_id, properties):
 
 def process_deals():
 
-    deals = get_deals()
-    click_up_clients = []
+    try:
 
-    # Loop through deals
-    for deal in deals:
-        deal_id = deal["id"]
-        deal_name = deal["properties"]["dealname"]
-        deal_status = deal["properties"]["estado_clickup"]
+        deals = get_deals()
+        click_up_clients = []
 
-        # Check if deal is ready to be processed
-        if deal_status == EstadoClickup.LISTO:
-            print ("\n###############################################")
-            print (f"Deal {deal_name} ({deal_id}) is ready to be processed")
-            print (f"ClickUp Status: {deal_status}")
+        # Loop through deals
+        for deal in deals:
+            deal_id = deal["id"]
+            deal_name = deal["properties"]["dealname"]
+            deal_status = deal["properties"]["estado_clickup"]
 
-            company = None
+            # Check if deal is ready to be processed
+            if deal_status == EstadoClickup.LISTO:
+                loggin_service.info ("\n###############################################")
+                loggin_service.info (f"Deal {deal_name} ({deal_id}) is ready to be processed")
+                loggin_service.info (f"ClickUp Status: {deal_status}")
 
-            # Get deal's companies
-            deal_companies = get_deal_companies(deal_id)
-    
-            # If deal has no company, skip it
-            if len(deal_companies) == 0:
-                print ("Deal has no company. Skipping...")
-                continue
-                
-            company_id = deal_companies[0]["to_object_id"]
-            company = get_company(company_id=company_id)
+                company = None
 
-            # If company is not found, skip it
-            if company is None:
-                print ("Company not found. Skipping...")
-                continue
-
-            # If company does not have nif_cif, skip it
-            if company["properties"]["nif_cif"] is None or company["properties"]["nif_cif"] == "":
-                print ("Company has no nif_cif. Skipping...")
-                continue
-
-            deal_quotes = get_deal_quotes(deal_id)
-
-            # If deal has no quotes, skip it
-            if len(deal_quotes) == 0:
-                print (f"Deal '{deal_name}' ({deal_id}) has no quotes")
-                continue
-
-            quote_id = deal_quotes[0]["to_object_id"]
-            print (f"Deal '{deal_name}' ({deal_id}) has a quote: {quote_id}")
-
-            quote_line_items = get_quote_line_items(quote_id=quote_id)
-            
-            # If quote has no line_items, skip it
-            if len(quote_line_items) == 0:
-                print (f"Quote '{quote_id}' has no line_items")
-                continue
-
-            # If quote is DRAFT, skip it
-            quote = get_quote(quote_id=quote_id)
-            if quote["properties"]["hs_status"] == "DRAFT":
-                print (f"Quote '{quote_id}' is DRAFT. Skipping...")
-                continue
-
-            line_items_data = []
-
-            # Loop through quote line_items
-            for quote_line_item in quote_line_items:
-                line_item_id = quote_line_item["to_object_id"]
-                line_item = get_line_item_by_id(line_item_id=line_item_id)
-                line_item_sku = line_item["properties"]["hs_sku"]
-                line_item_name = line_item["properties"]["name"]
-                # print (line_item)
-                line_items_data.append({
-                    "id": line_item_id,
-                    "sku": line_item_sku,
-                    "name": line_item_name,
-                })
-
-            print (f"Line items skus: {line_items_data}")
-
-            # Update Deal single_line_products_list field
-            single_line_products_list = Utils.build_single_line_products_list(line_items_data=line_items_data)
-            print (f"single_line_products_list: {single_line_products_list}")
-            properties = {
-                "single_line_products_list": single_line_products_list,
-            }
-            deal = hubspot_client.update_deal(deal_id=deal_id, properties=properties)
-            
-            
-            # Assign CS Owner to COMPANY based on line_items
-            company = assign_cs_owner_to_company(company=company, line_items_data=line_items_data)
-            
-            if company is None:
-                print ("Company not found. Skipping...")
-                continue
-
-            # Create CONTRACT and link to COMPANY and DEAL
-            contract = create_contract(contract_name=f"Contrato {deal_name}")
-            if contract is None:
-                print ("Contract not created. Skipping...")
-                continue
-
-            print (f"Contract created: {contract['id']}")
-            contract_id = contract["id"]
+                # Get deal's companies
+                deal_companies = get_deal_companies(deal_id)
         
-            # Update DEAL with CONTRACT
-            associate_contract_with_deal(deal_id=deal_id, contract_id=contract_id)
+                # If deal has no company, skip it
+                if len(deal_companies) == 0:
+                    loggin_service.info ("Deal has no company. Skipping...")
+                    continue
+                    
+                company_id = deal_companies[0]["to_object_id"]
+                company = get_company(company_id=company_id)
 
-            # Update COMPANY with CONTRACT
-            associate_contract_with_company(company_id=company_id, contract_id=contract_id)
-
-            products = []
-
-            # Create PROJECT for every line_item and link to COMPANY and CONTRACT
-            for line_item_data in line_items_data:
-                line_item_id = line_item_data["id"]
-                line_item_data = line_item_data["sku"]
-
-                project_name = Utils.build_project_name(sku=line_item_data, deal_name=deal_name)
-
-                project = create_project(project_name=project_name)
-                if project is None:
-                    print ("Project not created. Skipping...")
+                # If company is not found, skip it
+                if company is None:
+                    loggin_service.info ("Company not found. Skipping...")
                     continue
 
-                print (f"\nProject created: {line_item_data} - {project['id']}")
-                project_id = project["id"]
+                # If company does not have nif_cif, skip it
+                if company["properties"]["nif_cif"] is None or company["properties"]["nif_cif"] == "":
+                    loggin_service.info ("Company has no nif_cif. Skipping...")
+                    continue
 
-                products.append({
-                    "id": project_id,
-                    "sku": line_item_data,
-                })
+                deal_quotes = get_deal_quotes(deal_id)
 
-                # Update COMPANY with PROJECT
-                associate_project_with_company(company_id=company_id, project_id=project_id)
+                # If deal has no quotes, skip it
+                if len(deal_quotes) == 0:
+                    loggin_service.info (f"Deal '{deal_name}' ({deal_id}) has no quotes")
+                    continue
 
-                # Update CONTRACT with PROJECT
-                associate_project_with_contract(contract_id=contract_id, project_id=project_id)
+                quote_id = deal_quotes[0]["to_object_id"]
+                loggin_service.info (f"Deal '{deal_name}' ({deal_id}) has a quote: {quote_id}")
 
-            print (f"\nBuilding ClickUp payload...")
-            click_up_payload = build_click_up_payload(company=company, products=products, deal_id=deal_id)
-            click_up_clients.append(click_up_payload)
-        
+                quote_line_items = get_quote_line_items(quote_id=quote_id)
+                
+                # If quote has no line_items, skip it
+                if len(quote_line_items) == 0:
+                    loggin_service.info (f"Quote '{quote_id}' has no line_items")
+                    continue
 
-    return click_up_clients
+                # If quote is DRAFT, skip it
+                quote = get_quote(quote_id=quote_id)
+                if quote["properties"]["hs_status"] == "DRAFT":
+                    loggin_service.info (f"Quote '{quote_id}' is DRAFT. Skipping...")
+                    continue
+
+                line_items_data = []
+
+                # Loop through quote line_items
+                for quote_line_item in quote_line_items:
+                    line_item_id = quote_line_item["to_object_id"]
+                    line_item = get_line_item_by_id(line_item_id=line_item_id)
+                    line_item_sku = line_item["properties"]["hs_sku"]
+                    line_item_name = line_item["properties"]["name"]
+                    line_items_data.append({
+                        "id": line_item_id,
+                        "sku": line_item_sku,
+                        "name": line_item_name,
+                    })
+
+                loggin_service.info (f"Line items skus: {line_items_data}")
+
+                # Update Deal single_line_products_list field
+                single_line_products_list = Utils.build_single_line_products_list(line_items_data=line_items_data)
+                properties = {
+                    "single_line_products_list": single_line_products_list,
+                }
+                deal = hubspot_client.update_deal(deal_id=deal_id, properties=properties)
+                
+                
+                # Assign CS Owner to COMPANY based on line_items
+                company = assign_cs_owner_to_company(company=company, line_items_data=line_items_data)
+                
+                if company is None:
+                    loggin_service.info ("Company not found. Skipping...")
+                    continue
+
+                # Create CONTRACT and link to COMPANY and DEAL
+                contract = create_contract(contract_name=f"Contrato {deal_name}")
+                if contract is None:
+                    loggin_service.info ("Contract not created. Skipping...")
+                    continue
+
+                loggin_service.info (f"Contract created: {contract['id']}")
+                contract_id = contract["id"]
+            
+                # Update DEAL with CONTRACT
+                associate_contract_with_deal(deal_id=deal_id, contract_id=contract_id)
+
+                # Update COMPANY with CONTRACT
+                associate_contract_with_company(company_id=company_id, contract_id=contract_id)
+
+                products = []
+
+                # Create PROJECT for every line_item and link to COMPANY and CONTRACT
+                for line_item_data in line_items_data:
+                    line_item_id = line_item_data["id"]
+                    line_item_data = line_item_data["sku"]
+
+                    project_name = Utils.build_project_name(sku=line_item_data, deal_name=deal_name)
+
+                    project = create_project(project_name=project_name)
+                    if project is None:
+                        loggin_service.info ("Project not created. Skipping...")
+                        continue
+
+                    loggin_service.info (f"\nProject created: {line_item_data} - {project['id']}")
+                    project_id = project["id"]
+
+                    products.append({
+                        "id": project_id,
+                        "sku": line_item_data,
+                    })
+
+                    # Update COMPANY with PROJECT
+                    associate_project_with_company(company_id=company_id, project_id=project_id)
+
+                    # Update CONTRACT with PROJECT
+                    associate_project_with_contract(contract_id=contract_id, project_id=project_id)
+
+                loggin_service.info (f"\nBuilding ClickUp payload...")
+                click_up_payload = build_click_up_payload(company=company, products=products, deal_id=deal_id)
+                click_up_clients.append(click_up_payload)
+            
+
+        return click_up_clients
+    
+    except Exception as e:
+        log_error(e)
+        return {
+            "status": "error",
+            "message": f"Error when proccessing deals"
+        }
 
 
 def build_click_up_payload(company, products, deal_id):
