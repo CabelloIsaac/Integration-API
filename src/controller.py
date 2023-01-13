@@ -1,7 +1,20 @@
 from .click_up import controller as click_up_controller
 from .click_up.schemas import ClientBase
 from .hubspot import controller as hubspot_controller
-import logging
+from src.logging.service import LoggingService
+from .slack import controller as slack_controller
+
+def log_error(error):
+    """
+    Logs an error to log file and Slack
+
+    Args:
+        error (Exception): Error to log
+    """
+    loggin_service = LoggingService(module="root")
+    loggin_service.error(error)
+    slack_controller.send_error_alert(error)
+
 
 def sync_clients():
     """
@@ -12,7 +25,7 @@ def sync_clients():
     """
     click_up_clients = hubspot_controller.process_deals()
     processed_click_up_clients = []
-
+    
     for click_up_client in click_up_clients:
         processed_click_up_client = click_up_controller.sync_client(ClientBase(**click_up_client))
         processed_click_up_client["hubspot_company_id"] = click_up_client["hubspot_company_id"]

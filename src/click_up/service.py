@@ -50,7 +50,6 @@ class ClickUpApiService:
         Returns:
             dict: The task updated"""
 
-        print (f"Setting field {field_id} to {value} for task {task_id}")
         url = f"{self.api_prefix}/task/{task_id}/field/{field_id}"
 
         formatted_value = {"value": value}

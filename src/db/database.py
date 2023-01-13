@@ -1,7 +1,10 @@
+from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
+from src.slack import controller as slack_controller
+from src.logging.service import LoggingService
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,8 +22,16 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+logging_service = LoggingService(module=__name__)
+
 def create_tables(tables):
-    Base.metadata.create_all(engine, tables=tables)
+    try:
+        Base.metadata.create_all(engine, tables=tables)
+    except Exception as e:
+        message = f"Database connection error: {e}"
+        slack_controller.send_error_alert(message=message)
+        logging_service.error(message=message)
+        
 
 def get_db():
     db = SessionLocal()

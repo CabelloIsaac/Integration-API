@@ -30,8 +30,6 @@ class Utils:
         Returns:
             dict: The CIF/NIF field with the id and the value.
         """
-        # custom_fields = clickup_api_service.get_list_custom_fields(Config.CLICKUP_LIST_ID, as_name_id_dict=True)
-
         nif_cif = {}
         nif_cif_custom_field_id = Utils.get_custom_field_id_by_name(custom_fields, ClickUpCustomFields.CIF_NIF_CLIENTE)
         for field in client_custom_fields:
@@ -219,7 +217,8 @@ class Utils:
         if get_option_name:
             if "type" in field:
                 if field["type"] == "drop_down":
-                    custom_field_value = field["type_config"]["options"][int(custom_field_value)]["name"]
+                    if custom_field_value != "":
+                        custom_field_value = field["type_config"]["options"][int(custom_field_value)]["name"]
 
         
         return custom_field_value
