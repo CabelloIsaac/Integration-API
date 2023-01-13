@@ -314,8 +314,8 @@ def sync_client(request: ClientBase):
 
 def create_webhook():
     # webhook_endpoint = "https://cabelloisaac.com/clickup/webhook.php"
-    webhook_endpoint = "https://hook.us1.make.com/ky7jwni8gteba46ms9mdh90eiyrtp24j"
-    delete_webooks = False
+    webhook_endpoint = "https://9652-186-81-100-212.ngrok.io/clickup/task/sync"
+    delete_webooks = True
 
     # Get all webhooks in team
     webhooks = clickup_api_service.get_webhooks(Config.TEAM_ID)["webhooks"]
@@ -330,6 +330,9 @@ def create_webhook():
                 loggin_service.info(f"Deleting webhook {wh['id']}")
                 clickup_api_service.delete_webhook(wh["id"])
             webhook_exists = True
+            
+    if delete_webooks:
+        return
 
     # If webhook doesn't exist, create it
     if not webhook_exists:
@@ -337,7 +340,6 @@ def create_webhook():
         webhook = {
             "endpoint": webhook_endpoint,
             "events": [
-                "taskCreated",
                 "taskUpdated",
             ],
             "space_id": Config.CLIENTES_SPACE_ID,
@@ -424,6 +426,8 @@ def sync_task(request: TaskUpdatedElement):
     """Syncs a task with its subtasks"""
 
     start_time = time()
+    
+    create_webhook()
 
     loggin_service.info(f"Syncing task {request.task_id}")
     updated_task_id = request.task_id
@@ -433,16 +437,23 @@ def sync_task(request: TaskUpdatedElement):
         custom_task_ids=request.custom_task_ids,
     )
 
-    if "id" not in updated_task:
+    if "id" not in updated_task and "err" in updated_task:
         return {
             "status": "error",
-            "message": "Task not found"
+            "message": f"Error getting task: {updated_task}"
         }
 
     # Send task status to Hubspot
     updated_task_original_id = updated_task["id"]
+    tipo_item_clickup = Utils.get_custom_field_value_by_name(updated_task["custom_fields"], ClickUpCustomFields.TIPO_ITEM_CLICKUP, get_option_name=True)
     status = Utils.get_custom_field_value_by_name(updated_task["custom_fields"], ClickUpCustomFields.ESTADO_PROYECTO, get_option_name=True)
     hubspot_controller.set_click_up_status_in_project(click_up_status=status, click_up_id=updated_task_original_id)
+    
+    if tipo_item_clickup != "Proyecto":
+        return {
+            "status": "ok",
+            "message": "Task is not a project. Nothing to do."
+        }        
 
     if "subtasks" not in updated_task:
         return {

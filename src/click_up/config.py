@@ -37,6 +37,5 @@ class Config():
         ClickUpCustomFields.LINK_DOCUMENTO_TEXTOS,
         ClickUpCustomFields.LINK_PRESENTACION_CLIENTE,
         ClickUpCustomFields.PRODUCTO,
-        ClickUpCustomFields.TIPO_ITEM_CLICKUP,
         ClickUpCustomFields.TIPO_PROYECTO,
     ]  
